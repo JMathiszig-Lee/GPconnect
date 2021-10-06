@@ -39,7 +39,7 @@ async def parse_scr(scr):
         *[parse_scr_section(section) for section in entry["resource"]["section"]]
     )
 
-    print(scr_dict)
+    return scr_dict
 
 
 if __name__ == "__main__":

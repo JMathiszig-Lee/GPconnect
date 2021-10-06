@@ -1,14 +1,11 @@
 import os
 import ast
-import json
 from fastapi import FastAPI, Request
 from fastapi.params import Depends
-from fastapi.security import APIKeyCookie, OAuth2PasswordBearer
-from requests.sessions import session
-from starlette.responses import Response, RedirectResponse, HTMLResponse
+from fastapi.security import APIKeyCookie
+from starlette.responses import Response, RedirectResponse
 from requests_oauthlib import OAuth2Session
-from fhir.resources.bundle import Bundle
-from fhir.resources.documentreference import DocumentReference
+import parse_scr
 
 app = FastAPI()
 
@@ -20,6 +17,7 @@ SUMMARY_CARE_URL = "https://sandbox.api.service.nhs.uk/summary-care-record/FHIR/
 cookie_sec = APIKeyCookie(name="session")
 # replace "redirect_uri" with callback url,
 # which you registered during the app registration
+# this needs to be your own url or ngrok tunnel
 redirect_uri = "http://d7c4-208-127-199-137.ngrok.io/callback"
 
 # replace with your api key
@@ -38,9 +36,6 @@ def login(response: Response):
     nhsd = OAuth2Session(client_id=client_id, redirect_uri=redirect_uri)
     authorization_url, state = nhsd.authorization_url(AUTHORISE_URL)
 
-    # State is used to prevent CSRF, keep this for later.
-    # session["oauth_state"] = state
-    # response.set_cookie("session", state)
     return RedirectResponse(authorization_url)
 
 
@@ -61,18 +56,8 @@ def callback(response: Response, request: Request, code, state):
     return response
 
 
-@app.get("/profile")
-def profile(token=Depends(cookie_sec)):
-    # need ast.literal eval as otherwise token is a string and we get errors
-    nhsd = OAuth2Session(client_id, token=ast.literal_eval(token))
-
-    user_restricted_endpoint = nhsd.get(f"{BASE_URL}/hello-world/hello/user").json()
-    return user_restricted_endpoint
-    return {"test"}
-
-
 @app.get("/scr")
-def summary_care_record(token=Depends(cookie_sec)):
+async def summary_care_record(token=Depends(cookie_sec)):
     # need ast.literal eval as otherwise token is a string and we get errors
     nhsd = OAuth2Session(client_id, token=ast.literal_eval(token))
 
@@ -86,17 +71,7 @@ def summary_care_record(token=Depends(cookie_sec)):
         "attachment"
     ]["url"]
     scr = nhsd.get(scr_address).json()
-    print(scr)
-    with open("scr.json", "w") as output:
-        json.dump(scr, output)
 
-    html = ""
-    for i in scr["entry"][0]["resource"]["section"]:
-        print("--------")
-        print(i)
-        print("--------")
-        html += i["text"]["div"]
-        html += "<hr>"
-        # for key, value in i:
-        #     print(key, value)
-    return HTMLResponse(content=html)
+    parsed = await parse_scr.parse_scr(scr)
+
+    return {"scr": parsed}
