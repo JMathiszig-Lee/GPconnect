@@ -2,7 +2,7 @@ import json
 import asyncio
 from bs4 import BeautifulSoup
 from pprint import pprint
-
+import xml.etree.cElementTree as ET
 
 async def parse_scr(scr):
     """
@@ -41,8 +41,64 @@ async def parse_scr(scr):
 
     return scr_dict
 
+async def create_ccda(scr):
+    
+    ccda = ET.Element("ClinicalDocument")
+    ET.SubElement(ccda, "realmcode", code="GB")
+
+    templateids = {
+        "Allergies and Adverse Reactions": {
+            "TemplateID": "2.16.840.1.113883.10.20.22.2.6",
+            "Code": "48765-2"
+        },
+        "Current Repeat Medications": {
+            "TemplateID": "2.16.840.1.113883.10.20.22.2.1",
+            "Code": "10160-0"
+        },
+        "Problems and Issues": {
+            "TemplateID": "2.16.840.1.113883.10.20.22.2.5",
+            "Code": "11450-4"
+        },
+        "General Practice Summary": {
+            "TemplateID": "blank",
+            "Code": "blank"
+        },
+        "General Practice Summary": {
+            "TemplateID": "blank",
+            "Code": "blank"
+        },
+        "General Practice Summary": {
+            "TemplateID": "blank",
+            "Code": "blank"
+        },
+        "General Practice Summary": {
+            "TemplateID": "blank",
+            "Code": "blank"
+        }
+
+    }
+    async def generate_component(section):
+        try:
+            component = ET.SubElement(ccda, "component")
+            sec = ET.SubElement(component, "section")
+            ET.SubElement(sec, "code", code =templateids[section["title"]]["Code"], codeSystem="2.16.840.1.113883.6.1", codeSystemName="LOINC", displayName=section["title"])
+            ET.SubElement(sec, "templateId", root=templateids[section["title"]]["TemplateID"])
+            ET.SubElement(sec, "title").text=section["title"]
+            # ET.SubElement(sec, "text").text = section["text"]["div"]
+        except:
+            pass
+
+    entry = scr["entry"][0]
+
+    await asyncio.gather(
+        *[generate_component(section) for section in entry["resource"]["section"]]
+    )
+
+
+    tree = ET.ElementTree(ccda)
+    tree.write("ccda.xml")
 
 if __name__ == "__main__":
     with open("scr.json") as scr_json:
         scr = json.load(scr_json)
-        asyncio.run(parse_scr(scr))
+        asyncio.run(create_ccda(scr))

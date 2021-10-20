@@ -32,7 +32,7 @@ async def root():
 
 
 @app.get("/login")
-def login(response: Response):
+def login():
     nhsd = OAuth2Session(client_id=client_id, redirect_uri=redirect_uri)
     authorization_url, state = nhsd.authorization_url(AUTHORISE_URL)
 

@@ -8,11 +8,11 @@ fastapi = "*"
 uvicorn = "*"
 requests-oauthlib = "*"
 "fhir.resources" = "*"
-lxml = "*"
 beautifulsoup4 = "*"
+pydantic = "*"
 
 [dev-packages]
 black = "*"
 
 [requires]
-python_version = "3.9"
+python_version = "3.10"
