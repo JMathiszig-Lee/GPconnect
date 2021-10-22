@@ -18,7 +18,7 @@ cookie_sec = APIKeyCookie(name="session")
 # replace "redirect_uri" with callback url,
 # which you registered during the app registration
 # this needs to be your own url or ngrok tunnel
-redirect_uri = "http://d7c4-208-127-199-137.ngrok.io/callback"
+redirect_uri = "http://4aaf-208-127-198-204.ngrok.io/callback"
 
 # replace with your api key
 client_id = os.environ.get("CLIENT_ID")
