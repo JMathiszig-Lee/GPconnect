@@ -1,14 +1,20 @@
+from email import header
 import os
 import ast
 import json
 import asyncio
+from pprint import pprint
+from urllib import request
+import httpx
 
-from fastapi import FastAPI, Request, Response, applications
+from fastapi import FastAPI, Request, Response, applications, HTTPException
 from fastapi.params import Depends
 from fastapi.security import APIKeyCookie
 from starlette.responses import Response, RedirectResponse
 from requests_oauthlib import OAuth2Session
 import parse_scr
+
+from security import create_jwt
 
 app = FastAPI()
 
@@ -58,6 +64,95 @@ def callback(response: Response, request: Request, code, state):
     response.set_cookie("session", token)
     return response
 
+@app.get("/gpconnect/{nhsno}")
+async def gpconnect(nhsno:int = 9690937278):
+    #accesses gp connect endpoint for nhs number
+    def validateNHSnumber(number):
+        numbers = [int(c) for c in str(number)]
+
+        total = 0
+        for idx in range(0,9):
+            multiplier = 10 - idx
+            total += (numbers[idx] * multiplier)
+
+        _, modtot = divmod(total, 11)
+        checkdig = 11 - modtot
+
+        if checkdig == 11:
+            checkdig = 0
+
+        return checkdig == numbers[9]
+
+    #validate nhsnumber
+    if validateNHSnumber(nhsno) == False:
+        raise HTTPException(status_code=400, detail="Invalid NHS number")
+
+    FHir_identifier = f"https://fhir.nhs.uk/Id/nhs-number|{nhsno}"
+    token = create_jwt()
+    headers = {
+        "Ssp-TraceID": "09a01679-2564-0fb4-5129-aecc81ea2706",
+        "Ssp-From": "200000000359",
+        "Ssp-To": "918999198738",
+        "Ssp-InteractionID": "urn:nhs:names:services:gpconnect:fhir:operation:gpc.getstructuredrecord-1",
+        "Authorization": f"Bearer {token}",
+        "accept": "application/fhir+json",
+        "Content-Type": "application/fhir+json"
+    }
+
+    body = {
+        "resourceType": "Parameters",
+        "parameter": [
+            {
+            "name": "patientNHSNumber",
+            "valueIdentifier": {
+                "system": "https://fhir.nhs.uk/Id/nhs-number",
+                "value": f"{nhsno}"
+            }
+            },
+            {
+            "name": "includeAllergies",
+            "part": [
+                {
+                "name": "includeResolvedAllergies",
+                "valueBoolean": False
+                }
+            ]
+            },
+            {
+            "name": "includeMedication"
+            },
+            {
+            "name": "includeConsultations",
+            },
+            {
+            "name": "includeProblems"
+            },
+            {
+            "name": "includeImmunisations"
+            },
+            {
+            "name": "includeUncategorisedData"
+            },
+            {
+            "name": "includeInvestigations"
+            },
+            {
+            "name": "includeReferrals"
+            }
+        ]
+    }
+    r  = httpx.post("https://orange.testlab.nhs.uk/B82617/STU3/1/gpconnect/structured/fhir/Patient/$gpc.getstructuredrecord", json=body, headers=headers)
+    print(r)
+    bundle = json.loads(r.text)
+
+    
+    for i in bundle:
+        print (i)
+    # return json.loads(r.text)
+
+    # parsed = await parse_scr.parse_scr(r.text)
+
+    return bundle
 
 @app.get("/scr")
 async def summary_care_record(token=Depends(cookie_sec)):
