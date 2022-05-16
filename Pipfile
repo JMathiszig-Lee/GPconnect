@@ -12,6 +12,7 @@ beautifulsoup4 = "*"
 pydantic = "*"
 pyjwt = "*"
 httpx = "*"
+fhirclient = "*"
 
 [dev-packages]
 black = "*"

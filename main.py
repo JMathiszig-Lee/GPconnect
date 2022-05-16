@@ -15,6 +15,8 @@ from requests_oauthlib import OAuth2Session
 import parse_scr
 
 from security import create_jwt
+from fhirclient.models import bundle, resource
+
 
 app = FastAPI()
 
@@ -143,16 +145,22 @@ async def gpconnect(nhsno:int = 9690937278):
     }
     r  = httpx.post("https://orange.testlab.nhs.uk/B82617/STU3/1/gpconnect/structured/fhir/Patient/$gpc.getstructuredrecord", json=body, headers=headers)
     print(r)
-    bundle = json.loads(r.text)
-
     
-    for i in bundle:
-        print (i)
-    # return json.loads(r.text)
+    scr_bundle = json.loads(r.text)
 
-    # parsed = await parse_scr.parse_scr(r.text)
+    #get rid of fhir_comments
+    comment_index = None
+    for j, i in enumerate(scr_bundle["entry"]):
+        if "fhir_comments" in i.keys():
+            comment_index = j
+    scr_bundle["entry"].pop(comment_index)
+    
 
-    return bundle
+    fhir_bundle = bundle.Bundle(scr_bundle)
+    for entry in fhir_bundle.entry:
+        entry.resource
+
+    return json.loads(r.text)
 
 @app.get("/scr")
 async def summary_care_record(token=Depends(cookie_sec)):
