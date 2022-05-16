@@ -15,7 +15,7 @@ from requests_oauthlib import OAuth2Session
 import parse_scr
 
 from security import create_jwt
-from fhirclient.models import bundle, resource
+from fhirclient.models import bundle, medicationstatement, medication
 
 
 app = FastAPI()
@@ -121,10 +121,13 @@ async def gpconnect(nhsno:int = 9690937278):
             ]
             },
             {
-            "name": "includeMedication"
-            },
-            {
-            "name": "includeConsultations",
+            "name": "includeMedication",
+            "part": [
+                {
+                "name": "includePrescriptionIssues",
+                "valueBoolean": False
+                }
+            ]
             },
             {
             "name": "includeProblems"
@@ -133,14 +136,8 @@ async def gpconnect(nhsno:int = 9690937278):
             "name": "includeImmunisations"
             },
             {
-            "name": "includeUncategorisedData"
-            },
-            {
             "name": "includeInvestigations"
             },
-            {
-            "name": "includeReferrals"
-            }
         ]
     }
     r  = httpx.post("https://orange.testlab.nhs.uk/B82617/STU3/1/gpconnect/structured/fhir/Patient/$gpc.getstructuredrecord", json=body, headers=headers)
@@ -153,12 +150,34 @@ async def gpconnect(nhsno:int = 9690937278):
     for j, i in enumerate(scr_bundle["entry"]):
         if "fhir_comments" in i.keys():
             comment_index = j
-    scr_bundle["entry"].pop(comment_index)
+    if comment_index is not None: 
+        scr_bundle["entry"].pop(comment_index)
     
 
     fhir_bundle = bundle.Bundle(scr_bundle)
+
+
+    #index resources to allow for resolution
+    bundle_index = {}
     for entry in fhir_bundle.entry:
-        entry.resource
+        try:
+            address = f"{entry.resource.resource_type}/{entry.resource.id}"
+            bundle_index[address] = entry.resource
+        except:
+            pass
+
+    # pprint(bundle_index)
+
+    for entry in fhir_bundle.entry:
+        print(entry.resource)
+        if isinstance(entry.resource, medicationstatement.MedicationStatement):
+            
+            med_statement = entry.resource
+            if med_statement.status == "active":
+                # pprint(med_statement.as_json())
+                print(med_statement.dosage[0].text)
+                print(med_statement.dosage[0].patientInstruction)
+                print(bundle_index[entry.resource.medicationReference.reference].code.coding[0].display)
 
     return json.loads(r.text)
 
