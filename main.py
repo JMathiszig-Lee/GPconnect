@@ -66,16 +66,17 @@ def callback(response: Response, request: Request, code, state):
     response.set_cookie("session", token)
     return response
 
+
 @app.get("/gpconnect/{nhsno}")
-async def gpconnect(nhsno:int = 9690937278):
-    #accesses gp connect endpoint for nhs number
+async def gpconnect(nhsno: int = 9690937278):
+    # accesses gp connect endpoint for nhs number
     def validateNHSnumber(number):
         numbers = [int(c) for c in str(number)]
 
         total = 0
-        for idx in range(0,9):
+        for idx in range(0, 9):
             multiplier = 10 - idx
-            total += (numbers[idx] * multiplier)
+            total += numbers[idx] * multiplier
 
         _, modtot = divmod(total, 11)
         checkdig = 11 - modtot
@@ -85,7 +86,7 @@ async def gpconnect(nhsno:int = 9690937278):
 
         return checkdig == numbers[9]
 
-    #validate nhsnumber
+    # validate nhsnumber
     if validateNHSnumber(nhsno) == False:
         raise HTTPException(status_code=400, detail="Invalid NHS number")
 
@@ -98,66 +99,52 @@ async def gpconnect(nhsno:int = 9690937278):
         "Ssp-InteractionID": "urn:nhs:names:services:gpconnect:fhir:operation:gpc.getstructuredrecord-1",
         "Authorization": f"Bearer {token}",
         "accept": "application/fhir+json",
-        "Content-Type": "application/fhir+json"
+        "Content-Type": "application/fhir+json",
     }
 
     body = {
         "resourceType": "Parameters",
         "parameter": [
             {
-            "name": "patientNHSNumber",
-            "valueIdentifier": {
-                "system": "https://fhir.nhs.uk/Id/nhs-number",
-                "value": f"{nhsno}"
-            }
+                "name": "patientNHSNumber",
+                "valueIdentifier": {
+                    "system": "https://fhir.nhs.uk/Id/nhs-number",
+                    "value": f"{nhsno}",
+                },
             },
             {
-            "name": "includeAllergies",
-            "part": [
-                {
-                "name": "includeResolvedAllergies",
-                "valueBoolean": False
-                }
-            ]
+                "name": "includeAllergies",
+                "part": [{"name": "includeResolvedAllergies", "valueBoolean": False}],
             },
             {
-            "name": "includeMedication",
-            "part": [
-                {
-                "name": "includePrescriptionIssues",
-                "valueBoolean": False
-                }
-            ]
+                "name": "includeMedication",
+                "part": [{"name": "includePrescriptionIssues", "valueBoolean": False}],
             },
-            {
-            "name": "includeProblems"
-            },
-            {
-            "name": "includeImmunisations"
-            },
-            {
-            "name": "includeInvestigations"
-            },
-        ]
+            {"name": "includeProblems"},
+            {"name": "includeImmunisations"},
+            {"name": "includeInvestigations"},
+        ],
     }
-    r  = httpx.post("https://orange.testlab.nhs.uk/B82617/STU3/1/gpconnect/structured/fhir/Patient/$gpc.getstructuredrecord", json=body, headers=headers)
+    r = httpx.post(
+        "https://orange.testlab.nhs.uk/B82617/STU3/1/gpconnect/structured/fhir/Patient/$gpc.getstructuredrecord",
+        json=body,
+        headers=headers,
+    )
     print(r)
-    
+
     scr_bundle = json.loads(r.text)
 
-    #get rid of fhir_comments
+    # get rid of fhir_comments
     comment_index = None
     for j, i in enumerate(scr_bundle["entry"]):
         if "fhir_comments" in i.keys():
             comment_index = j
-    if comment_index is not None: 
+    if comment_index is not None:
         scr_bundle["entry"].pop(comment_index)
-    
 
     fhir_bundle = bundle.Bundle(scr_bundle)
 
-
-    #index resources to allow for resolution
+    # index resources to allow for resolution
     bundle_index = {}
     for entry in fhir_bundle.entry:
         try:
@@ -171,15 +158,24 @@ async def gpconnect(nhsno:int = 9690937278):
     for entry in fhir_bundle.entry:
         print(entry.resource)
         if isinstance(entry.resource, medicationstatement.MedicationStatement):
-            
+
             med_statement = entry.resource
             if med_statement.status == "active":
                 print(med_statement.dosage[0].text)
                 print(med_statement.dosage[0].patientInstruction)
-                print(bundle_index[med_statement.medicationReference.reference].code.coding[0].display)
-                print(bundle_index[med_statement.medicationReference.reference].code.coding[0].code)
+                print(
+                    bundle_index[med_statement.medicationReference.reference]
+                    .code.coding[0]
+                    .display
+                )
+                print(
+                    bundle_index[med_statement.medicationReference.reference]
+                    .code.coding[0]
+                    .code
+                )
 
     return json.loads(r.text)
+
 
 @app.get("/scr")
 async def summary_care_record(token=Depends(cookie_sec)):
@@ -201,11 +197,12 @@ async def summary_care_record(token=Depends(cookie_sec)):
 
     return {"scr": parsed}
 
+
 @app.get("/ccda")
 async def return_ccda():
-    #returns a ccda from saved json for now to prevent auth headaches
+    # returns a ccda from saved json for now to prevent auth headaches
     with open("scr.json") as scr_json:
         scr = json.load(scr_json)
         xml = await parse_scr.create_ccda(scr)
-        #print(xml)
+        # print(xml)
         return Response(content=xml, media_type="application/xml")

@@ -13,34 +13,33 @@ async def convert_resource(res):
 
     def convert_Condition(res):
         entry = ET.Element("entry")
-        #code
+        # code
         entry.append(get_code(res["resource"]["code"]))
-        
-        #status
-        ET.SubElement(entry, "statusCode", code =res["resource"]["verificationStatus"]["coding"][0]["code"] )
-        #effective time
+
+        # status
+        ET.SubElement(
+            entry,
+            "statusCode",
+            code=res["resource"]["verificationStatus"]["coding"][0]["code"],
+        )
+        # effective time
         onset = ET.SubElement(entry, "effectiveTime")
-        ET.SubElement(onset, "low", value = res["resource"]["onsetDateTime"])
+        ET.SubElement(onset, "low", value=res["resource"]["onsetDateTime"])
 
-
-        
         return entry
-
 
     def convert_Observation(res):
         entry = ET.Element("observation")
         entry.append(get_code(res["resource"]["code"]))
-        
-        #status
-        ET.SubElement(entry, "statusCode", code =res["resource"]["status"])
 
-        #time
+        # status
+        ET.SubElement(entry, "statusCode", code=res["resource"]["status"])
+
+        # time
         onset = ET.SubElement(entry, "effectiveTime")
-        ET.SubElement(onset, "low", value = res["resource"]["effectivePeriod"]["start"])
+        ET.SubElement(onset, "low", value=res["resource"]["effectivePeriod"]["start"])
 
-        
         return entry
-
 
     def convert_Encounter():
         pass
