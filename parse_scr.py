@@ -2,7 +2,6 @@ import json
 import asyncio
 from bs4 import BeautifulSoup
 import xml.etree.cElementTree as ET
-from fhir.resources.bundle import Bundle
 from fhir2ccda import convert_resource
 
 SUMMARY_CARE_URL = "https://sandbox.api.service.nhs.uk/summary-care-record/FHIR/R4"

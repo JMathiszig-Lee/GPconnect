@@ -166,7 +166,7 @@ async def gpconnect(nhsno:int = 9690937278):
         except:
             pass
 
-    # pprint(bundle_index)
+    pprint(bundle_index)
 
     for entry in fhir_bundle.entry:
         print(entry.resource)
@@ -174,10 +174,10 @@ async def gpconnect(nhsno:int = 9690937278):
             
             med_statement = entry.resource
             if med_statement.status == "active":
-                # pprint(med_statement.as_json())
                 print(med_statement.dosage[0].text)
                 print(med_statement.dosage[0].patientInstruction)
-                print(bundle_index[entry.resource.medicationReference.reference].code.coding[0].display)
+                print(bundle_index[med_statement.medicationReference.reference].code.coding[0].display)
+                print(bundle_index[med_statement.medicationReference.reference].code.coding[0].code)
 
     return json.loads(r.text)
 
