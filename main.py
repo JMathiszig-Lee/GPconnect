@@ -16,6 +16,7 @@ import parse_scr
 
 from security import create_jwt
 from fhirclient.models import bundle, medicationstatement, medication
+from fhirclient.models import list as fhirlist
 
 
 app = FastAPI()
@@ -67,7 +68,7 @@ def callback(response: Response, request: Request, code, state):
     return response
 
 @app.get("/gpconnect/{nhsno}")
-async def gpconnect(nhsno:int = 9690937278):
+async def gpconnect(nhsno:int = 9690937286):
     #accesses gp connect endpoint for nhs number
     def validateNHSnumber(number):
         numbers = [int(c) for c in str(number)]
@@ -169,15 +170,46 @@ async def gpconnect(nhsno:int = 9690937278):
     # pprint(bundle_index)
 
     for entry in fhir_bundle.entry:
-        print(entry.resource)
+        # print(entry.resource)
         if isinstance(entry.resource, medicationstatement.MedicationStatement):
             
             med_statement = entry.resource
             if med_statement.status == "active":
+                pass
                 # pprint(med_statement.as_json())
-                print(med_statement.dosage[0].text)
-                print(med_statement.dosage[0].patientInstruction)
-                print(bundle_index[entry.resource.medicationReference.reference].code.coding[0].display)
+                # print(med_statement.dosage[0].text)
+                # print(med_statement.dosage[0].patientInstruction)
+                # print(bundle_index[entry.resource.medicationReference.reference].code.coding[0].display)
+
+        elif isinstance(entry.resource, fhirlist.List):
+            print("--------")
+            
+            scr_list = entry.resource
+            print(scr_list.title)
+            if scr_list.entry:
+                for entry in scr_list.entry:
+                    
+                    referenced_item = bundle_index[entry.item.reference]
+
+                    if isinstance(referenced_item, medicationstatement.MedicationStatement):
+            
+                        med_statement = referenced_item
+                        # if med_statement.status == "active":
+                            # pprint(med_statement.as_json())
+                        print(bundle_index[referenced_item.medicationReference.reference].code.coding[0].display)
+                        print("-" + med_statement.dosage[0].text)
+                        print("-" + med_statement.dosage[0].patientInstruction)
+                        print("STATUS: " + med_statement.status)
+                    else: 
+                        try:
+                            print(referenced_item.code.coding[0].display)
+                        except:
+                            try:
+                                print(referenced_item.title)
+                            except:
+                                print (entry.item.reference)
+
+                print("--------")
 
     return json.loads(r.text)
 
