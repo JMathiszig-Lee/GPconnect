@@ -61,10 +61,10 @@ async def create_ccda(scr):
     ccda = ET.Element("ClinicalDocument")
     ET.SubElement(ccda, "realmcode", code="GB")
     ET.SubElement(
-                ccda, "templateId", root="2.16.840.1.11883.10.20.22.1.2", extension="2015-08-01"
-            )
+        ccda, "templateId", root="2.16.840.1.11883.10.20.22.1.2", extension="2015-08-01"
+    )
 
-    #snomed code
+    # snomed code
     ET.SubElement(
         ccda,
         "code",
@@ -74,7 +74,7 @@ async def create_ccda(scr):
         displayName=entry["resource"]["type"]["coding"][0]["display"],
     )
 
-    #loinc code
+    # loinc code
     ET.SubElement(
         ccda,
         "code",
@@ -83,7 +83,7 @@ async def create_ccda(scr):
         codeSystemName="LOINC",
     )
 
-    #author section
+    # author section
     author = ET.SubElement(ccda, "author")
     practioner_role = find_reference(entry["resource"]["author"][0]["reference"])
     practioner = find_reference(
@@ -93,14 +93,14 @@ async def create_ccda(scr):
         "text"
     ]
 
-    #documentation of section
+    # documentation of section
     doc_of = ET.SubElement(ccda, "documentationOf")
     service_event = ET.SubElement(doc_of, "serviceEvent", classCode="PCPR")
     time_covered = ET.SubElement(service_event, "effectiveTime")
 
-    #TODO vlue should be date of birth
+    # TODO vlue should be date of birth
     ET.SubElement(time_covered, "low", value="19750501")
-    #TODO vlue should be date of scr genration
+    # TODO vlue should be date of scr genration
     ET.SubElement(time_covered, "high", value="20120915")
 
     templateids = {
@@ -127,7 +127,7 @@ async def create_ccda(scr):
             component = ET.SubElement(ccda, "component")
             sec = ET.SubElement(component, "section")
 
-            #coding system
+            # coding system
             ET.SubElement(
                 sec,
                 "code",
@@ -137,18 +137,21 @@ async def create_ccda(scr):
                 displayName=section["title"],
             )
 
-            #root and extension
+            # root and extension
             ET.SubElement(
                 sec, "templateId", root=templateids[section["title"]]["TemplateID"]
             )
             ET.SubElement(
-                sec, "templateId", root=templateids[section["title"]]["TemplateID"], extension="2015-08-01"
+                sec,
+                "templateId",
+                root=templateids[section["title"]]["TemplateID"],
+                extension="2015-08-01",
             )
 
-            #must contain title
+            # must contain title
             ET.SubElement(sec, "title").text = section["title"]
             section_html = section["text"]["div"]
-            #must contain text
+            # must contain text
             text = ET.SubElement(sec, "text")
             text.append(ET.XML(section_html))
 
@@ -157,7 +160,6 @@ async def create_ccda(scr):
                     codeable_entry = find_reference(entry["reference"])
                     ent = ET.SubElement(sec, "entry")
                     ent.append(await (convert_resource(codeable_entry)))
-                    
 
     await asyncio.gather(
         *[generate_component(section) for section in entry["resource"]["section"]]

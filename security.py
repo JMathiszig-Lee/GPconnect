@@ -5,11 +5,14 @@ import jwt
 creation of JWT as per https://developer.nhs.uk/apis/gpconnect-1-5-0/integration_cross_organisation_audit_and_provenance.html
 """
 
-def create_jwt(audience: str = "https://orange.testlab.nhs.uk/B82617/STU3/1/gpconnect/documents/fhir" ):
+
+def create_jwt(
+    audience: str = "https://orange.testlab.nhs.uk/B82617/STU3/1/gpconnect/documents/fhir",
+):
     """
     creates JWT for access to GP connect
 
-    TODO: 
+    TODO:
     - make requesting device dynamic
     - make requesting organisation dynamic
     - make requesting practioner dynamic
@@ -27,63 +30,47 @@ def create_jwt(audience: str = "https://orange.testlab.nhs.uk/B82617/STU3/1/gpco
         "requesting_device": {
             "resourceType": "Device",
             "identifier": [
-            {
-                "system": "https://orange.testlab.nhs.uk/gpconnect-demonstrator/Id/local-system-instance-id",
-                "value": "gpcdemonstrator-1-orange"
-            }
+                {
+                    "system": "https://orange.testlab.nhs.uk/gpconnect-demonstrator/Id/local-system-instance-id",
+                    "value": "gpcdemonstrator-1-orange",
+                }
             ],
             "model": "GP Connect Demonstrator",
-            "version": "1.5.0"
+            "version": "1.5.0",
         },
         "requesting_organization": {
             "resourceType": "Organization",
             "identifier": [
-            {
-                "system": "https://fhir.nhs.uk/Id/ods-organization-code",
-                "value": "A11111"
-            }
+                {
+                    "system": "https://fhir.nhs.uk/Id/ods-organization-code",
+                    "value": "A11111",
+                }
             ],
-            "name": "Consumer organisation name"
+            "name": "Consumer organisation name",
         },
         "requesting_practitioner": {
             "resourceType": "Practitioner",
             "id": "1",
             "identifier": [
-            {
-                "system": "https://fhir.nhs.uk/Id/sds-user-id",
-                "value": "111111111111"
-            },
-            {
-                "system": "https://fhir.nhs.uk/Id/sds-role-profile-id",
-                "value": "22222222222222"
-            },
-            {
-                "system": "https://orange.testlab.nhs.uk/gpconnect-demonstrator/Id/local-user-id",
-                "value": "1"
-            }
+                {
+                    "system": "https://fhir.nhs.uk/Id/sds-user-id",
+                    "value": "111111111111",
+                },
+                {
+                    "system": "https://fhir.nhs.uk/Id/sds-role-profile-id",
+                    "value": "22222222222222",
+                },
+                {
+                    "system": "https://orange.testlab.nhs.uk/gpconnect-demonstrator/Id/local-user-id",
+                    "value": "1",
+                },
             ],
             "name": [
-            {
-                "family": "Demonstrator",
-                "given": [
-                "GPConnect"
-                ],
-                "prefix": [
-                "Dr"
-                ]
-            }
-            ]
-        }
-
-    }
-    return jwt.encode(
-        payload,
-        headers = {
-            "alg": "none",
-            "typ": "JWT"
+                {"family": "Demonstrator", "given": ["GPConnect"], "prefix": ["Dr"]}
+            ],
         },
-        key = None
-    )
+    }
+    return jwt.encode(payload, headers={"alg": "none", "typ": "JWT"}, key=None)
 
 
 if __name__ == "__main__":
