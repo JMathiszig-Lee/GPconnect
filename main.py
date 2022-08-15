@@ -2,10 +2,10 @@ import ast
 import asyncio
 import json
 import os
-import httpx
-import parse_scr
-
 from pprint import pprint
+
+import httpx
+import xmltodict
 from fastapi import FastAPI, HTTPException, Request, Response, applications
 from fastapi.params import Depends
 from fastapi.security import APIKeyCookie
@@ -15,6 +15,7 @@ from fhirclient.models import medication, medicationstatement
 from requests_oauthlib import OAuth2Session
 from starlette.responses import RedirectResponse, Response
 
+import parse_scr
 from fhir2ccda import convert_bundle
 from security import create_jwt
 
@@ -130,7 +131,7 @@ async def gpconnect(nhsno: int = 9690937286):
         json=body,
         headers=headers,
     )
-    print(r)
+    # print(r)
 
     scr_bundle = json.loads(r.text)
 
@@ -153,12 +154,14 @@ async def gpconnect(nhsno: int = 9690937286):
         except:
             pass
 
-    for i in bundle_index:
-        print(i)
+    # for i in bundle_index:
+    #     print(i)
 
     # pprint(bundle_index)
     xml_ccda = await convert_bundle(fhir_bundle, bundle_index)
-    print(xml_ccda)
+    pprint(xml_ccda)
+    with open(f"{nhsno}.xml", "w") as output:
+        output.write(xmltodict.unparse(xml_ccda, pretty=True))
 
     for entry in fhir_bundle.entry:
         # print(entry.resource)

@@ -1,9 +1,14 @@
 import asyncio
-from bdb import effective
+import datetime
 import xml.etree.cElementTree as ET
-from fhirclient.models.bundle import Bundle
+from bdb import effective
+
 from fhirclient.models import list as fhirlist
 from fhirclient.models import patient
+from fhirclient.models.bundle import Bundle
+
+from entries import allergy, problem
+
 
 async def convert_resource(res):
     def get_code(code: dict):
@@ -67,45 +72,117 @@ async def convert_resource(res):
         thing = locals()[f"convert_{first_word}"](res)
         return thing
 
-        
-def create_section(list : fhirlist.List) -> dict:
-    pass
 
 async def convert_bundle(bundle: Bundle, index: dict) -> dict:
     # http://www.hl7.org/ccdasearch/templates/2.16.840.1.113883.10.20.22.1.15.html
-    lists = [entry.resource.title for entry in bundle.entry if isinstance(entry.resource, fhirlist.List)]
-    subject = [entry.resource for entry in bundle.entry if isinstance(entry.resource, patient.Patient)]
+    lists = [
+        entry.resource
+        for entry in bundle.entry
+        if isinstance(entry.resource, fhirlist.List)
+    ]
+    subject = [
+        entry.resource
+        for entry in bundle.entry
+        if isinstance(entry.resource, patient.Patient)
+    ]
     ccda = {}
     ccda["ClinicalDocument"] = {}
     ccda["ClinicalDocument"]["templateid"] = {
         "@root": "2.16.840.1.113883.10.20.22.1.2",
-        "@extension": "2015-08-01"
+        "@extension": "2015-08-01",
     }
 
-    #code
+    # code
     ccda["ClinicalDocument"]["code"] = {
         "@code": "34133-9",
-        "@codeSystem": "2.16.840.1.113883.6.1"
+        "@codeSystem": "2.16.840.1.113883.6.1",
     }
 
-    #author
+    # author
 
-    #documentationOf
+    # documentationOf
     ccda["ClinicalDocument"]["documentationOf"] = {
-        "serviceEvent" : {
+        "serviceEvent": {
             "@classCode": "PCPR",
             "effectiveTime": {
-                "low": subject[0].birthDate.isostring,
-                "high": "20120915"
-            }
+                "low": {
+                    "@value": subject[0].birthDate.isostring,
+                },
+                "high": {"@value": datetime.datetime.today().isoformat()},
+            },
         }
     }
 
-    bundle_components = 
+    def create_section(list: fhirlist.List) -> dict:
+        templates = {
+            "Allergies and adverse reactions": {
+                "displayName": "Allergies, adverse reactions, alerts",
+                "root": "2.16.840.1.113883.10.20.22.2.6.1",
+                "Code": "48765-2",
+            },
+            "Medications and medical devices": {
+                "displayName": "Medications",
+                "root": "2.16.840.1.113883.10.20.22.2.1",
+                "Code": "10160-0",
+            },
+            "Problems": {
+                "displayName": "Problems List",
+                "root": "2.16.840.1.113883.10.20.22.2.5.1",
+                "Code": "11450-4",
+            },
+            "Immunisations": {
+                "displayName": "Immunisations",
+                "root": "2.16.840.1.113883.10.20.22.2.5",
+                "Code": "11450-4",
+            },
+        }
 
+        sections = [
+            "Allergies and adverse reactions",
+            "Immunisations",
+            "Medications and medical devices",
+            "Problems",
+        ]
+
+        # check if list is one of the desired ones
+        if list.title in sections:
+            comp = {}
+            comp["section"] = {
+                "templateId": {
+                    "@root": templates[list.title]["root"],
+                    "@extension": "2015-08-01",
+                },
+                "code": {
+                    "@code": templates[list.title]["Code"],
+                    "@displayName": templates[list.title]["displayName"],
+                    "@codeSystem": "2.16.840.1.113883.6.1",
+                },
+                "title": list.title,
+                "text": "lorem ipsum",
+            }
+            # if there are no entries
+            if not list.entry:
+                comp["section"]["@nullFlavour"] = "NI"
+                comp["section"]["text"] = "No Information"
+
+            else:
+                comp["section"]["entry"] = []
+                for entry in list.entry:
+                    referenced_item = index[entry.item.reference]
+
+                    if list.title == "Allergies and adverse reactions":
+                        comp["section"]["entry"].append(allergy(referenced_item))
+                    elif list.title == "Problems":
+                        comp["section"]["entry"].append(problem(referenced_item))
+
+            return comp
+
+    bundle_components = [create_section(list) for list in lists]
+    bundle_components = [x for x in bundle_components if x is not None]
+    ccda["ClinicalDocument"]["component"] = {}
     ccda["ClinicalDocument"]["component"]["structuredBody"] = {}
-
-    for list in lists:
-
+    ccda["ClinicalDocument"]["component"]["structuredBody"][
+        "component"
+    ] = bundle_components
 
     return ccda
