@@ -1,5 +1,9 @@
+import asyncio
+from bdb import effective
 import xml.etree.cElementTree as ET
-
+from fhirclient.models.bundle import Bundle
+from fhirclient.models import list as fhirlist
+from fhirclient.models import patient
 
 async def convert_resource(res):
     def get_code(code: dict):
@@ -62,3 +66,46 @@ async def convert_resource(res):
         first_word = resource_type.split()[0]
         thing = locals()[f"convert_{first_word}"](res)
         return thing
+
+        
+def create_section(list : fhirlist.List) -> dict:
+    pass
+
+async def convert_bundle(bundle: Bundle, index: dict) -> dict:
+    # http://www.hl7.org/ccdasearch/templates/2.16.840.1.113883.10.20.22.1.15.html
+    lists = [entry.resource.title for entry in bundle.entry if isinstance(entry.resource, fhirlist.List)]
+    subject = [entry.resource for entry in bundle.entry if isinstance(entry.resource, patient.Patient)]
+    ccda = {}
+    ccda["ClinicalDocument"] = {}
+    ccda["ClinicalDocument"]["templateid"] = {
+        "@root": "2.16.840.1.113883.10.20.22.1.2",
+        "@extension": "2015-08-01"
+    }
+
+    #code
+    ccda["ClinicalDocument"]["code"] = {
+        "@code": "34133-9",
+        "@codeSystem": "2.16.840.1.113883.6.1"
+    }
+
+    #author
+
+    #documentationOf
+    ccda["ClinicalDocument"]["documentationOf"] = {
+        "serviceEvent" : {
+            "@classCode": "PCPR",
+            "effectiveTime": {
+                "low": subject[0].birthDate.isostring,
+                "high": "20120915"
+            }
+        }
+    }
+
+    bundle_components = 
+
+    ccda["ClinicalDocument"]["component"]["structuredBody"] = {}
+
+    for list in lists:
+
+
+    return ccda

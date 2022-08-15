@@ -13,6 +13,7 @@ pydantic = "*"
 pyjwt = "*"
 httpx = "*"
 fhirclient = "*"
+isort = "*"
 
 [dev-packages]
 black = "*"

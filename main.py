@@ -1,23 +1,22 @@
-from email import header
-import os
 import ast
-import json
 import asyncio
-from pprint import pprint
-from urllib import request
+import json
+import os
 import httpx
-
-from fastapi import FastAPI, Request, Response, applications, HTTPException
-from fastapi.params import Depends
-from fastapi.security import APIKeyCookie
-from starlette.responses import Response, RedirectResponse
-from requests_oauthlib import OAuth2Session
 import parse_scr
 
-from security import create_jwt
-from fhirclient.models import bundle, medicationstatement, medication
+from pprint import pprint
+from fastapi import FastAPI, HTTPException, Request, Response, applications
+from fastapi.params import Depends
+from fastapi.security import APIKeyCookie
+from fhirclient.models import bundle
 from fhirclient.models import list as fhirlist
+from fhirclient.models import medication, medicationstatement
+from requests_oauthlib import OAuth2Session
+from starlette.responses import RedirectResponse, Response
 
+from fhir2ccda import convert_bundle
+from security import create_jwt
 
 app = FastAPI()
 
@@ -154,7 +153,12 @@ async def gpconnect(nhsno: int = 9690937286):
         except:
             pass
 
+    for i in bundle_index:
+        print(i)
+
     # pprint(bundle_index)
+    xml_ccda = await convert_bundle(fhir_bundle, bundle_index)
+    print(xml_ccda)
 
     for entry in fhir_bundle.entry:
         # print(entry.resource)
