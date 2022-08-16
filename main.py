@@ -158,8 +158,10 @@ async def gpconnect(nhsno: int = 9690937286):
     #     print(i)
 
     # pprint(bundle_index)
+
+    ##cache this response
     xml_ccda = await convert_bundle(fhir_bundle, bundle_index)
-    pprint(xml_ccda)
+    # pprint(xml_ccda)
     with open(f"{nhsno}.xml", "w") as output:
         output.write(xmltodict.unparse(xml_ccda, pretty=True))
 

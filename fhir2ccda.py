@@ -1,79 +1,13 @@
-import asyncio
 import datetime
-import xml.etree.cElementTree as ET
-from bdb import effective
 
 from fhirclient.models import list as fhirlist
 from fhirclient.models import patient
-from fhirclient.models.bundle import Bundle
+from fhirclient.models import bundle
 
-from entries import allergy, problem
-
-
-async def convert_resource(res):
-    def get_code(code: dict):
-        code_xml = ET.Element(
-            "code",
-            code=code["coding"][0]["code"],
-            codeSystemName=code["coding"][0]["system"],
-            displayName=code["coding"][0]["display"],
-        )
-        return code_xml
-
-    def convert_Condition(res):
-        entry = ET.Element("entry")
-        # code
-        entry.append(get_code(res["resource"]["code"]))
-
-        # status
-        ET.SubElement(
-            entry,
-            "statusCode",
-            code=res["resource"]["verificationStatus"]["coding"][0]["code"],
-        )
-        # effective time
-        onset = ET.SubElement(entry, "effectiveTime")
-        ET.SubElement(onset, "low", value=res["resource"]["onsetDateTime"])
-
-        return entry
-
-    def convert_Observation(res):
-        entry = ET.Element("observation")
-        entry.append(get_code(res["resource"]["code"]))
-
-        # status
-        ET.SubElement(entry, "statusCode", code=res["resource"]["status"])
-
-        # time
-        onset = ET.SubElement(entry, "effectiveTime")
-        ET.SubElement(onset, "low", value=res["resource"]["effectivePeriod"]["start"])
-
-        return entry
-
-    def convert_Encounter():
-        pass
-
-    def convert_PractionerRole():
-        pass
-
-    def convert_Practioner():
-        pass
-
-    def convert_Problem():
-        pass
-
-    def convert_Allergy():
-        pass
-
-    if res:
-        # res = Condition.parse_obj(res["resource"])
-        resource_type = res["resource"]["resourceType"]
-        first_word = resource_type.split()[0]
-        thing = locals()[f"convert_{first_word}"](res)
-        return thing
+from entries import allergy, medication, problem
 
 
-async def convert_bundle(bundle: Bundle, index: dict) -> dict:
+async def convert_bundle(bundle: bundle.Bundle, index: dict) -> dict:
     # http://www.hl7.org/ccdasearch/templates/2.16.840.1.113883.10.20.22.1.15.html
     lists = [
         entry.resource
@@ -86,7 +20,10 @@ async def convert_bundle(bundle: Bundle, index: dict) -> dict:
         if isinstance(entry.resource, patient.Patient)
     ]
     ccda = {}
-    ccda["ClinicalDocument"] = {}
+    ccda["ClinicalDocument"] = {
+        "realmCode": {"@code": "GB"},
+        "title": {"#text": "Summary Care Record"},
+    }
     ccda["ClinicalDocument"]["templateid"] = {
         "@root": "2.16.840.1.113883.10.20.22.1.2",
         "@extension": "2015-08-01",
@@ -98,7 +35,46 @@ async def convert_bundle(bundle: Bundle, index: dict) -> dict:
         "@codeSystem": "2.16.840.1.113883.6.1",
     }
 
+    # patient
+    # TODO refine address parsing as may have multiple
+
+    patient_dict = {
+        "patientRole": {
+            "patient": {
+                "id": {
+                    "@extension": subject[0].identifier[0].value,
+                    "@root": "2.16.840.1.113883.2.1.4.1",
+                },
+                "name": {
+                    "@use": "L",
+                    "given": {"#text": " ".join(subject[0].name[0].given)},
+                    "family": {"#text": subject[0].name[0].family},
+                },
+                "birthTime": {"@value": subject[0].birthDate.isostring},
+                "addr": {
+                    "@use": "HP",
+                    "streetAddressLine": [x for x in subject[0].address[0].line],
+                    "city": {"#text": subject[0].address[0].city},
+                    "postalCode": {"#text": subject[0].address[0].postalCode},
+                },
+            }
+        }
+    }
+
+    ccda["ClinicalDocument"]["recordTarget"] = patient_dict
+
     # author
+    ccda["ClinicalDocument"]["author"] = {
+        "time": {"@value": datetime.datetime.today().isoformat()},
+        "assignedAuthor": {
+            "addr": {"@nullFlavor": "NA"},
+            "telecom": {"@nullFlavor": "NA"},
+            "assignedAuthoringDevice": {
+                "manufacturerModelName": {"#text": "SCR Connector"},
+                "softwareName": {"#text": "SCR Connector v0.1"},
+            },
+        },
+    }
 
     # documentationOf
     ccda["ClinicalDocument"]["documentationOf"] = {
@@ -108,10 +84,16 @@ async def convert_bundle(bundle: Bundle, index: dict) -> dict:
                 "low": {
                     "@value": subject[0].birthDate.isostring,
                 },
-                "high": {"@value": datetime.datetime.today().isoformat()},
+                "high": {"@value": datetime.date.today()},
             },
         }
     }
+
+
+    #vital signs doesn't appear in the SCR therefore crate blank list to generate xml
+    vital_signs = fhirlist.List()
+    vital_signs.title = "Vital Signs"
+    lists.append(vital_signs)
 
     def create_section(list: fhirlist.List) -> dict:
         templates = {
@@ -135,6 +117,11 @@ async def convert_bundle(bundle: Bundle, index: dict) -> dict:
                 "root": "2.16.840.1.113883.10.20.22.2.5",
                 "Code": "11450-4",
             },
+            "Vital Signs": {
+                "displayName": "Vital Signs",
+                "root": "2.16.840.1.113883.10.20.22.2.4.1",
+                "Code": "8716-3",
+            }
         }
 
         sections = [
@@ -142,10 +129,12 @@ async def convert_bundle(bundle: Bundle, index: dict) -> dict:
             "Immunisations",
             "Medications and medical devices",
             "Problems",
+            "Vital Signs"
         ]
 
         # check if list is one of the desired ones
         if list.title in sections:
+            print(list.title)
             comp = {}
             comp["section"] = {
                 "templateId": {
@@ -174,6 +163,8 @@ async def convert_bundle(bundle: Bundle, index: dict) -> dict:
                         comp["section"]["entry"].append(allergy(referenced_item))
                     elif list.title == "Problems":
                         comp["section"]["entry"].append(problem(referenced_item))
+                    elif list.title == "Medications and medical devices":
+                        comp["section"]["entry"].append(medication(referenced_item, index))
 
             return comp
 

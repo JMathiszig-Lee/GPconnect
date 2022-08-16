@@ -1,7 +1,35 @@
 import uuid
 
-from fhirclient.models import allergyintolerance, condition
+from fhirclient.models import allergyintolerance, condition, medicationstatement
 
+def medication(entry: medicationstatement.MedicationStatement, index:dict) -> dict :
+    # http://www.hl7.org/ccdasearch/templates/2.16.840.1.113883.10.20.22.4.42.html
+
+    med = {
+        "substanceAdministration": {
+            "@classCode": "SBADM",
+            "@moodCode": "INT",
+        }
+    }
+
+    med["substanceAdministration"]["templateID"] = {
+        "@root": "2.16.840.1.113883.10.20.22.4.42",
+        "@extension": "2014-06-09",
+    }
+    med["substanceAdministration"]["id"] = {"@root": entry.identifier[0].value}
+    med["substanceAdministration"]["code"] = {"@code": "CONC", "@codesystem": "2.16.840.1.113883.5.6"}
+
+    med["substanceAdministration"]["statuscode"] = {"@code": entry.status}
+
+    #TODO add robust checking on this in case there's no high value
+    med["substanceAdministration"]["effectTime"] = {
+        "low": {"@value": entry.effectivePeriod.start.isostring},
+        "high": {"@value": entry.effectivePeriod.end.isostring}}
+
+    referenced_med = index[entry.medicationReference.reference]
+    request = index[entry.basedOn[0].reference]
+
+    return med
 
 def problem(entry: condition.Condition) -> dict:
     # http://www.hl7.org/ccdasearch/templates/2.16.840.1.113883.10.20.22.4.3.html
