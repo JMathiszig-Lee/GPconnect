@@ -89,8 +89,7 @@ async def convert_bundle(bundle: bundle.Bundle, index: dict) -> dict:
         }
     }
 
-
-    #vital signs doesn't appear in the SCR therefore crate blank list to generate xml
+    # vital signs doesn't appear in the SCR therefore crate blank list to generate xml
     vital_signs = fhirlist.List()
     vital_signs.title = "Vital Signs"
     lists.append(vital_signs)
@@ -121,7 +120,7 @@ async def convert_bundle(bundle: bundle.Bundle, index: dict) -> dict:
                 "displayName": "Vital Signs",
                 "root": "2.16.840.1.113883.10.20.22.2.4.1",
                 "Code": "8716-3",
-            }
+            },
         }
 
         sections = [
@@ -129,7 +128,7 @@ async def convert_bundle(bundle: bundle.Bundle, index: dict) -> dict:
             "Immunisations",
             "Medications and medical devices",
             "Problems",
-            "Vital Signs"
+            "Vital Signs",
         ]
 
         # check if list is one of the desired ones
@@ -164,7 +163,9 @@ async def convert_bundle(bundle: bundle.Bundle, index: dict) -> dict:
                     elif list.title == "Problems":
                         comp["section"]["entry"].append(problem(referenced_item))
                     elif list.title == "Medications and medical devices":
-                        comp["section"]["entry"].append(medication(referenced_item, index))
+                        comp["section"]["entry"].append(
+                            medication(referenced_item, index)
+                        )
 
             return comp
 

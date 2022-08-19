@@ -1,19 +1,25 @@
 import uuid
 
-from fhirclient.models import allergyintolerance, condition, medicationstatement, codeableconcept
+from fhirclient.models import (
+    allergyintolerance,
+    condition,
+    medicationstatement,
+    codeableconcept,
+)
 
 
 def generate_code(concept: codeableconcept.CodeableConcept) -> dict:
     code = {
         "@code": concept.coding,
-        "@displayName":concept.coding,
-        "codeSystem":concept.coding,
-        "codeSystemName":concept.coding,
+        "@displayName": concept.coding,
+        "codeSystem": concept.coding,
+        "codeSystemName": concept.coding,
     }
 
     return code
 
-def medication(entry: medicationstatement.MedicationStatement, index:dict) -> dict :
+
+def medication(entry: medicationstatement.MedicationStatement, index: dict) -> dict:
     # http://www.hl7.org/ccdasearch/templates/2.16.840.1.113883.10.20.22.4.42.html
 
     med = {
@@ -28,34 +34,36 @@ def medication(entry: medicationstatement.MedicationStatement, index:dict) -> di
         "@extension": "2014-06-09",
     }
     med["substanceAdministration"]["id"] = {"@root": entry.identifier[0].value}
-    med["substanceAdministration"]["code"] = {"@code": "CONC", "@codesystem": "2.16.840.1.113883.5.6"}
+    med["substanceAdministration"]["code"] = {
+        "@code": "CONC",
+        "@codesystem": "2.16.840.1.113883.5.6",
+    }
 
     med["substanceAdministration"]["statuscode"] = {"@code": entry.status}
 
-    #TODO add robust checking on this in case there's no high value
+    # TODO add robust checking on this in case there's no high value
     med["substanceAdministration"]["effectTime"] = {
         "low": {"@value": entry.effectivePeriod.start.isostring},
-        "high": {"@value": entry.effectivePeriod.end.isostring}}
+        "high": {"@value": entry.effectivePeriod.end.isostring},
+    }
 
     referenced_med = index[entry.medicationReference.reference]
     request = index[entry.basedOn[0].reference]
 
-
-    #medication information
+    # medication information
     # http://www.hl7.org/ccdasearch/templates/2.16.840.1.113883.10.20.22.4.23.html
     med["substanceAdministration"]["consumable"] = {}
     med["substanceAdministration"]["consumable"]["manufacturedProduct"] = {
-        "@classCode" : "MANU",
+        "@classCode": "MANU",
         "templateID": {
             "@root": "2.16.840.1.113883.10.20.22.4.23",
             "@extension": "2014-06-09",
-            "manufacturedMaterial":  [c]
-        }
-
+            "manufacturedMaterial": [generate_code(x) for x in entry.medicationCodeableConcept],
+        },
     }
 
-
     return med
+
 
 def problem(entry: condition.Condition) -> dict:
     # http://www.hl7.org/ccdasearch/templates/2.16.840.1.113883.10.20.22.4.3.html

@@ -156,7 +156,7 @@ async def gpconnect(nhsno: int = 9690937286):
             bundle_index[address] = entry.resource
         except:
             pass
-    
+
     # print("bundle index")
     for i in bundle_index:
         print(i)
