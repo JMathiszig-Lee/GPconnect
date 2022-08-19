@@ -143,7 +143,10 @@ async def gpconnect(nhsno: int = 9690937286):
     if comment_index is not None:
         scr_bundle["entry"].pop(comment_index)
 
+    # pprint(scr_bundle)
+
     fhir_bundle = bundle.Bundle(scr_bundle)
+    print(fhir_bundle)
 
     # index resources to allow for resolution
     bundle_index = {}
@@ -153,9 +156,10 @@ async def gpconnect(nhsno: int = 9690937286):
             bundle_index[address] = entry.resource
         except:
             pass
-
-    # for i in bundle_index:
-    #     print(i)
+    
+    # print("bundle index")
+    for i in bundle_index:
+        print(i)
 
     # pprint(bundle_index)
 

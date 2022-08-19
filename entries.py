@@ -1,6 +1,17 @@
 import uuid
 
-from fhirclient.models import allergyintolerance, condition, medicationstatement
+from fhirclient.models import allergyintolerance, condition, medicationstatement, codeableconcept
+
+
+def generate_code(concept: codeableconcept.CodeableConcept) -> dict:
+    code = {
+        "@code": concept.coding,
+        "@displayName":concept.coding,
+        "codeSystem":concept.coding,
+        "codeSystemName":concept.coding,
+    }
+
+    return code
 
 def medication(entry: medicationstatement.MedicationStatement, index:dict) -> dict :
     # http://www.hl7.org/ccdasearch/templates/2.16.840.1.113883.10.20.22.4.42.html
@@ -28,6 +39,21 @@ def medication(entry: medicationstatement.MedicationStatement, index:dict) -> di
 
     referenced_med = index[entry.medicationReference.reference]
     request = index[entry.basedOn[0].reference]
+
+
+    #medication information
+    # http://www.hl7.org/ccdasearch/templates/2.16.840.1.113883.10.20.22.4.23.html
+    med["substanceAdministration"]["consumable"] = {}
+    med["substanceAdministration"]["consumable"]["manufacturedProduct"] = {
+        "@classCode" : "MANU",
+        "templateID": {
+            "@root": "2.16.840.1.113883.10.20.22.4.23",
+            "@extension": "2014-06-09",
+            "manufacturedMaterial":  [c]
+        }
+
+    }
+
 
     return med
 
