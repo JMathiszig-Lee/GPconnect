@@ -1,19 +1,16 @@
 import uuid
+from ast import expr_context
 
-from fhirclient.models import (
-    allergyintolerance,
-    condition,
-    medicationstatement,
-    codeableconcept,
-)
+from fhirclient.models import allergyintolerance, coding, condition
+from fhirclient.models import medication as fhirmed
+from fhirclient.models import medicationstatement
 
 
-def generate_code(concept: codeableconcept.CodeableConcept) -> dict:
+def generate_code(coding: coding.Coding) -> dict:
     code = {
-        "@code": concept.coding,
-        "@displayName": concept.coding,
-        "codeSystem": concept.coding,
-        "codeSystemName": concept.coding,
+        "@code": coding.code,
+        "@displayName": coding.display,
+        "@codeSystemName": coding.system,
     }
 
     return code
@@ -47,7 +44,8 @@ def medication(entry: medicationstatement.MedicationStatement, index: dict) -> d
         "high": {"@value": entry.effectivePeriod.end.isostring},
     }
 
-    referenced_med = index[entry.medicationReference.reference]
+    referenced_med: fhirmed.Medication() = index[entry.medicationReference.reference]
+    print(referenced_med.code.coding)
     request = index[entry.basedOn[0].reference]
 
     # medication information
@@ -58,7 +56,30 @@ def medication(entry: medicationstatement.MedicationStatement, index: dict) -> d
         "templateID": {
             "@root": "2.16.840.1.113883.10.20.22.4.23",
             "@extension": "2014-06-09",
-            "manufacturedMaterial": [generate_code(x) for x in entry.medicationCodeableConcept],
+            "manufacturedMaterial": {
+                "code": [generate_code(x) for x in referenced_med.code.coding],
+            },
+        },
+    }
+
+    med["substanceAdministration"]["entryRelationship"] = {
+        "@typeCode": "SUBJ",
+        "act": {
+            "@classCode": "ACT",
+            "@moodCode": "INT",
+            "templateID": {
+                "@root": "2.16.840.1.113883.10.20.22.4.20",
+                "@extension": "2014-06-09",
+            },
+            "code": {
+                "@code": "422037009",
+                "@displayName": "Provider medication administration instructions",
+                "@codeSystemName": "SNOMED CT",
+                "@codeSystem": "2.16.840.1.113883.6.96",
+            },
+            "text": {"#text": entry.dosage[0].text},
+            "patientInstruction": {"#text": entry.dosage[0].patientInstruction},
+            "satusCode": {"@code": "completed"},
         },
     }
 
@@ -113,7 +134,7 @@ def problem(entry: condition.Condition) -> dict:
         "@code": entry.code.coding[0].code,
         "@displayName": entry.code.coding[0].display,
         "@codeSystemName": "SNOMED CT",
-        "@codeSyetem": "2.16.840.1.113883.6.96",
+        "@codeSystem": "2.16.840.1.113883.6.96",
     }
 
     prob["act"]["entryRelationship"]["observation"] = observation
@@ -168,7 +189,7 @@ def allergy(entry: allergyintolerance.AllergyIntolerance) -> dict:
                     "@code": entry.code.coding[0].code,
                     "@displayName": entry.code.coding[0].display,
                     "@codeSystemName": "SNOMED CT",
-                    "@codeSyetem": "2.16.840.1.113883.6.96",
+                    "@codeSystem": "2.16.840.1.113883.6.96",
                 },
             },
         },

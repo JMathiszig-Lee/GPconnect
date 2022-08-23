@@ -1,8 +1,8 @@
 import datetime
 
+from fhirclient.models import bundle
 from fhirclient.models import list as fhirlist
 from fhirclient.models import patient
-from fhirclient.models import bundle
 
 from entries import allergy, medication, problem
 
