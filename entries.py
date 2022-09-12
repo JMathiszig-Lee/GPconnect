@@ -1,23 +1,14 @@
 import uuid
-from ast import expr_context
 
 from fhirclient.models import allergyintolerance, coding, condition
 from fhirclient.models import medication as fhirmed
 from fhirclient.models import medicationstatement
 
-
-def generate_code(coding: coding.Coding) -> dict:
-    code = {
-        "@code": coding.code,
-        "@displayName": coding.display,
-        "@codeSystemName": coding.system,
-    }
-
-    return code
+from helpers import date_helper, generate_code, templateId
 
 
 def medication(entry: medicationstatement.MedicationStatement, index: dict) -> dict:
-    # http://www.hl7.org/ccdasearch/templates/2.16.840.1.113883.10.20.22.4.42.html
+    # http://www.hl7.org/ccdasearch/templates/2.16.840.1.113883.10.20.22.4.16.html
 
     med = {
         "substanceAdministration": {
@@ -26,26 +17,24 @@ def medication(entry: medicationstatement.MedicationStatement, index: dict) -> d
         }
     }
 
-    med["substanceAdministration"]["templateID"] = {
-        "@root": "2.16.840.1.113883.10.20.22.4.42",
-        "@extension": "2014-06-09",
-    }
+    med["substanceAdministration"]["templateId"] = templateId(
+        "2.16.840.1.113883.10.20.22.4.16", "2014-06-09"
+    )
     med["substanceAdministration"]["id"] = {"@root": entry.identifier[0].value}
     med["substanceAdministration"]["code"] = {
         "@code": "CONC",
-        "@codesystem": "2.16.840.1.113883.5.6",
+        "@codeSystem": "2.16.840.1.113883.5.6",
     }
 
-    med["substanceAdministration"]["statuscode"] = {"@code": entry.status}
+    med["substanceAdministration"]["statusCode"] = {"@code": entry.status}
 
     # TODO add robust checking on this in case there's no high value
-    med["substanceAdministration"]["effectTime"] = {
-        "low": {"@value": entry.effectivePeriod.start.isostring},
-        "high": {"@value": entry.effectivePeriod.end.isostring},
+    med["substanceAdministration"]["effectiveTime"] = {
+        "low": {"@value": date_helper(entry.effectivePeriod.start.isostring)},
+        "high": {"@value": date_helper(entry.effectivePeriod.end.isostring)},
     }
 
     referenced_med: fhirmed.Medication() = index[entry.medicationReference.reference]
-    print(referenced_med.code.coding)
     request = index[entry.basedOn[0].reference]
 
     # medication information
@@ -53,12 +42,10 @@ def medication(entry: medicationstatement.MedicationStatement, index: dict) -> d
     med["substanceAdministration"]["consumable"] = {}
     med["substanceAdministration"]["consumable"]["manufacturedProduct"] = {
         "@classCode": "MANU",
-        "templateID": {
-            "@root": "2.16.840.1.113883.10.20.22.4.23",
-            "@extension": "2014-06-09",
-            "manufacturedMaterial": {
-                "code": [generate_code(x) for x in referenced_med.code.coding],
-            },
+        "templateId": templateId("2.16.840.1.113883.10.20.22.4.23", "2014-06-09"),
+        "id": {"@root": uuid.uuid4()},
+        "manufacturedMaterial": {
+            "code": [generate_code(x) for x in referenced_med.code.coding],
         },
     }
 
@@ -67,10 +54,7 @@ def medication(entry: medicationstatement.MedicationStatement, index: dict) -> d
         "act": {
             "@classCode": "ACT",
             "@moodCode": "INT",
-            "templateID": {
-                "@root": "2.16.840.1.113883.10.20.22.4.20",
-                "@extension": "2014-06-09",
-            },
+            "templateId": templateId("2.16.840.1.113883.10.20.22.4.20", "2014-06-09"),
             "code": {
                 "@code": "422037009",
                 "@displayName": "Provider medication administration instructions",
@@ -79,7 +63,7 @@ def medication(entry: medicationstatement.MedicationStatement, index: dict) -> d
             },
             "text": {"#text": entry.dosage[0].text},
             "patientInstruction": {"#text": entry.dosage[0].patientInstruction},
-            "satusCode": {"@code": "completed"},
+            "statusCode": {"@code": "completed"},
         },
     }
 
@@ -95,23 +79,23 @@ def problem(entry: condition.Condition) -> dict:
         }
     }
 
-    prob["act"]["templateID"] = {
-        "@root": "2.16.840.1.113883.10.20.22.4.3",
-        "@extension": "2015-08-01",
-    }
+    prob["act"]["templateId"] = templateId(
+        "2.16.840.1.113883.10.20.22.4.3", "2015-08-01"
+    )
     prob["act"]["id"] = {"@root": uuid.uuid4()}
     prob["act"]["code"] = {"@code": "CONC", "@codesystem": "2.16.840.1.113883.5.6"}
 
-    prob["act"]["statuscode"] = {"@code": entry.clinicalStatus}
-    prob["act"]["effectTime"] = {"low": {"@value": entry.assertedDate.isostring}}
+    prob["act"]["statusCode"] = {"@code": entry.clinicalStatus}
+    prob["act"]["effectiveTime"] = {
+        "low": {"@value": date_helper(entry.assertedDate.isostring)}
+    }
     prob["act"]["entryRelationship"] = {"@typeCode": "SUBJ"}
 
     # http://www.hl7.org/ccdasearch/templates/2.16.840.1.113883.10.20.22.4.4.html
     observation = {"@classCode": "OBS", "@moodCode": "EVN"}
-    observation["templateId"] = {
-        "@root": "2.16.840.1.113883.10.20.22.4.4",
-        "@extension": "2015-08-01",
-    }
+    observation["templateId"] = templateId(
+        "2.16.840.1.113883.10.20.22.4.4", "2015-08-01"
+    )
     observation["id"] = {"@root": uuid.uuid4()}
     observation["code"] = [
         {
@@ -128,7 +112,9 @@ def problem(entry: condition.Condition) -> dict:
         },
     ]
     observation["statusCode"] = {"@code": "completed"}
-    observation["effectiveTime"] = {"low": {"@value": entry.assertedDate.isostring}}
+    observation["effectiveTime"] = {
+        "low": {"@value": date_helper(entry.assertedDate.isostring)}
+    }
     observation["value"] = {
         "@xsi:type": "CD",
         "@code": entry.code.coding[0].code,
@@ -150,24 +136,24 @@ def allergy(entry: allergyintolerance.AllergyIntolerance) -> dict:
             "@moodCode": "EVN",
         }
     }
-    all["act"]["templateID"] = {
-        "@root": "2.16.840.1.113883.10.20.22.4.30",
-        "@extension": "2015-08-01",
-    }
+    all["act"]["templateId"] = templateId(
+        "2.16.840.1.113883.10.20.22.4.30", "2015-08-01"
+    )
     all["act"]["id"] = {"@root": uuid.uuid4()}
-    all["act"]["code"] = {"@code": "CONC", "@codesystem": "2.16.840.1.113883.5.6"}
+    all["act"]["code"] = {"@code": "CONC", "@codeSystem": "2.16.840.1.113883.5.6"}
 
     # may need to be made dynamic if force to query old allergies
-    all["act"]["statuscode"] = {"@code": "active"}
-    all["act"]["effectTime"] = {"low": {"@value": entry.assertedDate.isostring}}
+    all["act"]["statusCode"] = {"@code": "active"}
+    all["act"]["effectiveTime"] = {
+        "low": {"@value": date_helper(entry.assertedDate.isostring)}
+    }
     all["act"]["entryRelationship"] = {"@typeCode": "SUBJ"}
 
     # http://www.hl7.org/ccdasearch/templates/2.16.840.1.113883.10.20.22.4.7.html
     observation = {"@classCode": "OBS", "@moodCode": "EVN"}
-    observation["templateId"] = {
-        "@root": "2.16.840.1.113883.10.20.22.4.7",
-        "@extension": "2014-06-09",
-    }
+    observation["templateId"] = templateId(
+        "2.16.840.1.113883.10.20.22.4.7", "2014-06-09"
+    )
     observation["id"] = {"@root": uuid.uuid4()}
     observation["code"] = {"@code": "ASSERTION", "@codeSystem": "2.16.840.1.113883.5.4"}
     observation["statusCode"] = {"@code": "completed"}
@@ -196,18 +182,17 @@ def allergy(entry: allergyintolerance.AllergyIntolerance) -> dict:
     }
 
     observation["entryRelationship"] = {
-        "@typeCode": "MSFT",
+        "@typeCode": "MFST",
         "@inversionInd": "true",
         "observation": {
             "@classCode": "OBS",
             "@moodCode": "EVN",
-            "templateID": {
-                "@root": "2.16.840.1.113883.10.20.22.4.9",
-                "@extension": "2014-06-09",
-            },
+            "templateId": templateId("2.16.840.1.113883.10.20.22.4.9", "2014-06-09"),
             "id": {"@root": uuid.uuid4()},
             "code": {"@code": "ASSERTION", "@codeSystem": "2.16.840.1.113883.5.4"},
-            "effectiveTime": {"low": {"@value": entry.assertedDate.isostring}},
+            "effectiveTime": {
+                "low": {"@value": date_helper(entry.assertedDate.isostring)}
+            },
             "value": {
                 "@xsi:type": "CD",
                 "@code": entry.reaction[0].manifestation[0].coding[0].code,

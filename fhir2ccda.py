@@ -5,6 +5,7 @@ from fhirclient.models import list as fhirlist
 from fhirclient.models import patient
 
 from entries import allergy, medication, problem
+from helpers import date_helper, templateId
 
 
 async def convert_bundle(bundle: bundle.Bundle, index: dict) -> dict:
@@ -21,13 +22,16 @@ async def convert_bundle(bundle: bundle.Bundle, index: dict) -> dict:
     ]
     ccda = {}
     ccda["ClinicalDocument"] = {
+        "@xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+        "@xmlns": "urn:hl7-org:v3",
+        "@xmlns:voc": "urn:hl7-org:v3/voc",
+        "@xmlns:sdtc": "urn:hl7-org:sdtc",
         "realmCode": {"@code": "GB"},
-        "title": {"#text": "Summary Care Record"},
+        "typeId": {"@root": "2.16.840.1.113883.1.3", "@extension": "POCD_HD000040"},
     }
-    ccda["ClinicalDocument"]["templateid"] = {
-        "@root": "2.16.840.1.113883.10.20.22.1.2",
-        "@extension": "2015-08-01",
-    }
+    ccda["ClinicalDocument"]["templateId"] = templateId(
+        "2.16.840.1.113883.10.20.22.1.2", "2015-08-01"
+    )
 
     # code
     ccda["ClinicalDocument"]["code"] = {
@@ -35,29 +39,31 @@ async def convert_bundle(bundle: bundle.Bundle, index: dict) -> dict:
         "@codeSystem": "2.16.840.1.113883.6.1",
     }
 
+    ccda["ClinicalDocument"]["title"] = {"#text": "Summary Care Record"}
+
     # patient
     # TODO refine address parsing as may have multiple
 
     patient_dict = {
         "patientRole": {
+            "id": {
+                "@extension": subject[0].identifier[0].value,
+                "@root": "2.16.840.1.113883.2.1.4.1",
+            },
+            "addr": {
+                "@use": "HP",
+                "streetAddressLine": [x for x in subject[0].address[0].line],
+                "city": {"#text": subject[0].address[0].city},
+                "postalCode": {"#text": subject[0].address[0].postalCode},
+            },
             "patient": {
-                "id": {
-                    "@extension": subject[0].identifier[0].value,
-                    "@root": "2.16.840.1.113883.2.1.4.1",
-                },
                 "name": {
                     "@use": "L",
                     "given": {"#text": " ".join(subject[0].name[0].given)},
                     "family": {"#text": subject[0].name[0].family},
                 },
-                "birthTime": {"@value": subject[0].birthDate.isostring},
-                "addr": {
-                    "@use": "HP",
-                    "streetAddressLine": [x for x in subject[0].address[0].line],
-                    "city": {"#text": subject[0].address[0].city},
-                    "postalCode": {"#text": subject[0].address[0].postalCode},
-                },
-            }
+                "birthTime": {"@value": date_helper(subject[0].birthDate.isostring)},
+            },
         }
     }
 
@@ -65,7 +71,7 @@ async def convert_bundle(bundle: bundle.Bundle, index: dict) -> dict:
 
     # author
     ccda["ClinicalDocument"]["author"] = {
-        "time": {"@value": datetime.datetime.today().isoformat()},
+        "time": {"@value": datetime.date.today().strftime("%Y%m%d")},
         "assignedAuthor": {
             "addr": {"@nullFlavor": "NA"},
             "telecom": {"@nullFlavor": "NA"},
@@ -82,9 +88,9 @@ async def convert_bundle(bundle: bundle.Bundle, index: dict) -> dict:
             "@classCode": "PCPR",
             "effectiveTime": {
                 "low": {
-                    "@value": subject[0].birthDate.isostring,
+                    "@value": date_helper(subject[0].birthDate.isostring),
                 },
-                "high": {"@value": datetime.date.today()},
+                "high": {"@value": datetime.date.today().strftime("%Y%m%d")},
             },
         }
     }
@@ -136,10 +142,7 @@ async def convert_bundle(bundle: bundle.Bundle, index: dict) -> dict:
             print(list.title)
             comp = {}
             comp["section"] = {
-                "templateId": {
-                    "@root": templates[list.title]["root"],
-                    "@extension": "2015-08-01",
-                },
+                "templateId": templateId(templates[list.title]["root"], "2015-8-1"),
                 "code": {
                     "@code": templates[list.title]["Code"],
                     "@displayName": templates[list.title]["displayName"],
