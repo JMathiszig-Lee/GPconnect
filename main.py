@@ -6,7 +6,6 @@ from uuid import uuid4
 import httpx
 import xmltodict
 from fastapi import FastAPI, HTTPException
-from fastapi.security import APIKeyCookie
 from fhirclient.models import bundle
 
 from ccda.convert_mime import convert_mime
@@ -18,22 +17,6 @@ from security import create_jwt
 client = redis_connect()
 app = FastAPI()
 REGISTRY_ID = os.getenv("REGISTRY_ID", str(uuid4()))
-
-BASE_URL = "https://sandbox.api.service.nhs.uk"
-AUTHORISE_URL = "https://sandbox.api.service.nhs.uk/oauth2/authorize"
-ACCESS_TOKEN_URL = "https://sandbox.api.service.nhs.uk/oauth2/token"
-SUMMARY_CARE_URL = "https://sandbox.api.service.nhs.uk/summary-care-record/FHIR/R4"
-
-cookie_sec = APIKeyCookie(name="session")
-# replace "redirect_uri" with callback url,
-# which you registered during the app registration
-# this needs to be your own url or ngrok tunnel
-redirect_uri = "http://520c-208-127-199-154.ngrok.io/callback"
-
-# replace with your api key
-client_id = os.environ.get("CLIENT_ID")
-# replace with your secret
-client_secret = os.environ.get("CLIENT_SECRET")
 
 
 @app.on_event("startup")
@@ -48,7 +31,13 @@ async def root():
 
 @app.get("/gpconnect/{nhsno}")
 async def gpconnect(nhsno: int = 9690937286):
-    # accesses gp connect endpoint for nhs number
+    """accesses gp connect endpoint for nhs number"""
+
+    # test cache
+    docid = client.get(nhsno)
+    if docid is not None:
+        print("cached!!!!")
+        print(docid)
 
     # validate nhsnumber
     if validateNHSnumber(nhsno) == False:
@@ -106,7 +95,6 @@ async def gpconnect(nhsno: int = 9690937286):
         scr_bundle["entry"].pop(comment_index)
 
     fhir_bundle = bundle.Bundle(scr_bundle)
-    print(fhir_bundle)
 
     # index resources to allow for resolution
     bundle_index = {}
@@ -119,7 +107,7 @@ async def gpconnect(nhsno: int = 9690937286):
 
     ##cache this response
     xml_ccda = await convert_bundle(fhir_bundle, bundle_index)
-    xop = await convert_mime(xml_ccda)
+    xop = convert_mime(xml_ccda)
     doc_uuid = str(uuid4())
 
     client.setex(nhsno, timedelta(minutes=5), doc_uuid)

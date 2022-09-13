@@ -10,6 +10,7 @@ def convert_mime(ccda: dict):
 
     Args:
         ccda: dictionary created by convert bundle
+
     Returns:
         XOP infoset
     """
