@@ -4,8 +4,8 @@ from fhirclient.models import bundle
 from fhirclient.models import list as fhirlist
 from fhirclient.models import patient
 
-from entries import allergy, medication, problem
-from helpers import date_helper, templateId
+from .entries import allergy, medication, problem
+from .helpers import date_helper, templateId
 
 
 async def convert_bundle(bundle: bundle.Bundle, index: dict) -> dict:

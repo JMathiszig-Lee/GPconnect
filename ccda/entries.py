@@ -4,7 +4,7 @@ from fhirclient.models import allergyintolerance, coding, condition
 from fhirclient.models import medication as fhirmed
 from fhirclient.models import medicationstatement
 
-from helpers import date_helper, generate_code, templateId
+from .helpers import date_helper, generate_code, templateId
 
 
 def medication(entry: medicationstatement.MedicationStatement, index: dict) -> dict:

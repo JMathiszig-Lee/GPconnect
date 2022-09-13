@@ -1,5 +1,6 @@
 import json
 import os
+from datetime import timedelta
 from uuid import uuid4
 
 import httpx
@@ -8,8 +9,9 @@ from fastapi import FastAPI, HTTPException
 from fastapi.security import APIKeyCookie
 from fhirclient.models import bundle
 
-from fhir2ccda import convert_bundle
-from helpers import validateNHSnumber
+from ccda.convert_mime import convert_mime
+from ccda.fhir2ccda import convert_bundle
+from ccda.helpers import validateNHSnumber
 from redis_connect import redis_connect
 from security import create_jwt
 
@@ -36,7 +38,7 @@ client_secret = os.environ.get("CLIENT_SECRET")
 
 @app.on_event("startup")
 async def startup_event():
-    client.sadd("registry", REGISTRY_ID)
+    client.set("registry", REGISTRY_ID)
 
 
 @app.get("/")
@@ -115,11 +117,14 @@ async def gpconnect(nhsno: int = 9690937286):
         except:
             pass
 
-    for i in bundle_index:
-        print(i)
-
     ##cache this response
     xml_ccda = await convert_bundle(fhir_bundle, bundle_index)
+    xop = await convert_mime(xml_ccda)
+    doc_uuid = str(uuid4())
+
+    client.setex(nhsno, timedelta(minutes=5), doc_uuid)
+    client.setex(doc_uuid, timedelta(minutes=5), xop)
+
     # pprint(xml_ccda)
     with open(f"{nhsno}.xml", "w") as output:
         output.write(xmltodict.unparse(xml_ccda, pretty=True))
