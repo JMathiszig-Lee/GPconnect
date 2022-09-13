@@ -1,21 +1,12 @@
-import ast
-import asyncio
 import json
 import os
-from pprint import pprint
 
 import httpx
 import xmltodict
-from fastapi import FastAPI, HTTPException, Request, Response, applications
-from fastapi.params import Depends
+from fastapi import FastAPI, HTTPException
 from fastapi.security import APIKeyCookie
 from fhirclient.models import bundle
-from fhirclient.models import list as fhirlist
-from fhirclient.models import medication, medicationstatement
-from requests_oauthlib import OAuth2Session
-from starlette.responses import RedirectResponse, Response
 
-import parse_scr
 from fhir2ccda import convert_bundle
 from security import create_jwt
 
@@ -41,31 +32,6 @@ client_secret = os.environ.get("CLIENT_SECRET")
 @app.get("/")
 async def root():
     return {"message": "hello world"}
-
-
-@app.get("/login")
-def login():
-    nhsd = OAuth2Session(client_id=client_id, redirect_uri=redirect_uri)
-    authorization_url, state = nhsd.authorization_url(AUTHORISE_URL)
-
-    return RedirectResponse(authorization_url)
-
-
-@app.get("/callback")
-def callback(response: Response, request: Request, code, state):
-    print("callback")
-    nhsd = OAuth2Session(client_id=client_id, redirect_uri=redirect_uri, state=state)
-
-    token = nhsd.fetch_token(
-        token_url=ACCESS_TOKEN_URL,
-        client_secret=client_secret,
-        include_client_id=client_id,
-        authorization_response=request.url,
-        code=code,
-    )
-    response = RedirectResponse("/scr")
-    response.set_cookie("session", token)
-    return response
 
 
 @app.get("/gpconnect/{nhsno}")
@@ -169,83 +135,4 @@ async def gpconnect(nhsno: int = 9690937286):
     with open(f"{nhsno}.xml", "w") as output:
         output.write(xmltodict.unparse(xml_ccda, pretty=True))
 
-    for entry in fhir_bundle.entry:
-        # print(entry.resource)
-        if isinstance(entry.resource, medicationstatement.MedicationStatement):
-
-            med_statement = entry.resource
-            if med_statement.status == "active":
-                pass
-                # pprint(med_statement.as_json())
-                # print(med_statement.dosage[0].text)
-                # print(med_statement.dosage[0].patientInstruction)
-                # print(bundle_index[entry.resource.medicationReference.reference].code.coding[0].display)
-
-        elif isinstance(entry.resource, fhirlist.List):
-            print("--------")
-
-            scr_list = entry.resource
-            print(scr_list.title)
-            if scr_list.entry:
-                for entry in scr_list.entry:
-
-                    referenced_item = bundle_index[entry.item.reference]
-
-                    if isinstance(
-                        referenced_item, medicationstatement.MedicationStatement
-                    ):
-
-                        med_statement = referenced_item
-                        # if med_statement.status == "active":
-                        # pprint(med_statement.as_json())
-                        print(
-                            bundle_index[referenced_item.medicationReference.reference]
-                            .code.coding[0]
-                            .display
-                        )
-                        print("-" + med_statement.dosage[0].text)
-                        print("-" + med_statement.dosage[0].patientInstruction)
-                        print("STATUS: " + med_statement.status)
-                    else:
-                        try:
-                            print(referenced_item.code.coding[0].display)
-                        except:
-                            try:
-                                print(referenced_item.title)
-                            except:
-                                print(entry.item.reference)
-
-                print("--------")
-
     return json.loads(r.text)
-
-
-@app.get("/scr")
-async def summary_care_record(token=Depends(cookie_sec)):
-    # need ast.literal eval as otherwise token is a string and we get errors
-    nhsd = OAuth2Session(client_id, token=ast.literal_eval(token))
-
-    NHS_no = 9000000009
-    FHir_identifier = f"https://fhir.nhs.uk/Id/nhs-number|{NHS_no}"
-    user_restricted_endpoint = nhsd.get(
-        f"{SUMMARY_CARE_URL}/DocumentReference", params={"patient": FHir_identifier}
-    ).json()
-    print(user_restricted_endpoint)
-    scr_address = user_restricted_endpoint["entry"][0]["resource"]["content"][0][
-        "attachment"
-    ]["url"]
-    scr = nhsd.get(scr_address).json()
-
-    parsed = await parse_scr.parse_scr(scr)
-
-    return {"scr": parsed}
-
-
-@app.get("/ccda")
-async def return_ccda():
-    # returns a ccda from saved json for now to prevent auth headaches
-    with open("scr.json") as scr_json:
-        scr = json.load(scr_json)
-        xml = await parse_scr.create_ccda(scr)
-        # print(xml)
-        return Response(content=xml, media_type="application/xml")
