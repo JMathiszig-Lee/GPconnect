@@ -3,6 +3,31 @@ from datetime import datetime
 from fhirclient.models import coding
 
 
+def validateNHSnumber(number: int) -> bool:
+    """validates NHS number
+
+    Args:
+        NHs number as integer
+
+    Returns:
+        Boolean if NHS number is valid or not
+    """
+    numbers = [int(c) for c in str(number)]
+
+    total = 0
+    for idx in range(0, 9):
+        multiplier = 10 - idx
+        total += numbers[idx] * multiplier
+
+    _, modtot = divmod(total, 11)
+    checkdig = 11 - modtot
+
+    if checkdig == 11:
+        checkdig = 0
+
+    return checkdig == numbers[9]
+
+
 def generate_code(coding: coding.Coding) -> dict:
     code = {
         "@code": coding.code,

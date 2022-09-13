@@ -1,5 +1,6 @@
 import json
 import os
+from uuid import uuid4
 
 import httpx
 import xmltodict
@@ -8,9 +9,13 @@ from fastapi.security import APIKeyCookie
 from fhirclient.models import bundle
 
 from fhir2ccda import convert_bundle
+from helpers import validateNHSnumber
+from redis_connect import redis_connect
 from security import create_jwt
 
+client = redis_connect()
 app = FastAPI()
+REGISTRY_ID = os.getenv("REGISTRY_ID", str(uuid4()))
 
 BASE_URL = "https://sandbox.api.service.nhs.uk"
 AUTHORISE_URL = "https://sandbox.api.service.nhs.uk/oauth2/authorize"
@@ -29,6 +34,11 @@ client_id = os.environ.get("CLIENT_ID")
 client_secret = os.environ.get("CLIENT_SECRET")
 
 
+@app.on_event("startup")
+async def startup_event():
+    client.sadd("registry", REGISTRY_ID)
+
+
 @app.get("/")
 async def root():
     return {"message": "hello world"}
@@ -37,21 +47,6 @@ async def root():
 @app.get("/gpconnect/{nhsno}")
 async def gpconnect(nhsno: int = 9690937286):
     # accesses gp connect endpoint for nhs number
-    def validateNHSnumber(number):
-        numbers = [int(c) for c in str(number)]
-
-        total = 0
-        for idx in range(0, 9):
-            multiplier = 10 - idx
-            total += numbers[idx] * multiplier
-
-        _, modtot = divmod(total, 11)
-        checkdig = 11 - modtot
-
-        if checkdig == 11:
-            checkdig = 0
-
-        return checkdig == numbers[9]
 
     # validate nhsnumber
     if validateNHSnumber(nhsno) == False:
@@ -97,7 +92,6 @@ async def gpconnect(nhsno: int = 9690937286):
         json=body,
         headers=headers,
     )
-    # print(r)
 
     scr_bundle = json.loads(r.text)
 
@@ -108,8 +102,6 @@ async def gpconnect(nhsno: int = 9690937286):
             comment_index = j
     if comment_index is not None:
         scr_bundle["entry"].pop(comment_index)
-
-    # pprint(scr_bundle)
 
     fhir_bundle = bundle.Bundle(scr_bundle)
     print(fhir_bundle)
@@ -123,11 +115,8 @@ async def gpconnect(nhsno: int = 9690937286):
         except:
             pass
 
-    # print("bundle index")
     for i in bundle_index:
         print(i)
-
-    # pprint(bundle_index)
 
     ##cache this response
     xml_ccda = await convert_bundle(fhir_bundle, bundle_index)
