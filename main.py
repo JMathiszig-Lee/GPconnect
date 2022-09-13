@@ -13,9 +13,12 @@ from ccda.fhir2ccda import convert_bundle
 from ccda.helpers import validateNHSnumber
 from redis_connect import redis_connect
 from security import create_jwt
+from SOAP import soap
 
 client = redis_connect()
 app = FastAPI()
+app.include_router(soap.router)
+
 REGISTRY_ID = os.getenv("REGISTRY_ID", str(uuid4()))
 
 
