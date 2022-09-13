@@ -5,14 +5,22 @@ name = "pypi"
 
 [packages]
 fastapi = "*"
-uvicorn = "*"
 requests-oauthlib = "*"
 "fhir.resources" = "*"
-lxml = "*"
 beautifulsoup4 = "*"
+pydantic = "*"
+pyjwt = "*"
+httpx = "*"
+isort = "*"
+xmltodict = "*"
+uvicorn = {extras = ["standard"], version = "*"}
+fhirclient = "~=3.0.0"
+redis = "*"
 
 [dev-packages]
 black = "*"
+websockets = "*"
+pre-commit = "*"
 
 [requires]
-python_version = "3.9"
+python_version = "3.10"
