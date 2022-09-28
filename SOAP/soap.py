@@ -57,28 +57,19 @@ async def iti39(request: Request):
             status_code=400, detail=f"Content type {content_type} not supported"
         )
 
-
-from fhirclient.models import bundle
-
-
 @router.post("/iti38")
 async def iti38(request: Request):
     content_type = request.headers["Content-Type"]
     # Response(content=data, media_type="application/xml")
     if content_type == "application/xml":
         body = await request.body()
-        dict = xmltodict.parse(
-            body,
-            process_namespaces=True,
-            namespaces={
-                "http://www.w3.org/2003/05/soap-envelope": None,
-                "http://www.w3.org/2005/08/addressing": None,
-                "urn:oasis:names:tc:ebxml-regrep:xsd:query:3.0": None,
-                "urn:oasis:names:tc:ebxml-regrep:xsd:rim:3.0": None,
-                "urn:ihe:iti:xds-b:2007": None,
-            },
-        )
-        return dict
+        envelope = clean_soap(body)
+        soap_body = envelope["Body"]
+        slots = soap_body["AdhocQueryRequest"]["AdhocQueryRequest"]["Slot"]
+        query_id = soap_body["AdhocQueryRequest"]["AdhocQueryRequest"]["@id"]
+        patient_id = next(x["ValueList"]["Value"] for x in slots if x["@name"] == "XDSDocumentEntryPatientId")
+
+        return envelope
     else:
         raise HTTPException(
             status_code=400, detail=f"Content type {content_type} not supported"
