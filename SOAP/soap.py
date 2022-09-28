@@ -5,6 +5,7 @@ import xmltodict
 from fastapi import APIRouter, HTTPException, Request, Response
 
 from ccda.helpers import clean_soap
+from .responses import iti_39_response
 from redis_connect import redis_connect
 
 router = APIRouter(prefix="/SOAP")
@@ -37,16 +38,28 @@ async def iti39(request: Request):
             document_id = envelope["Body"]["RetrieveDocumentSetRequest"][
                 "DocumentRequest"
             ]["DocumentUniqueId"]
-            document = client.get(document_id)
-            return document
         except:
-            raise HTTPException(status_code=404, detail=f"Document not found")
+            raise HTTPException(status_code=404, detail=f"DocumentUniqueId not found")
+
+        document = client.get(document_id)
+        if document is not None:
+            # return ITI39 response
+            data = await iti_39_response(envelope["Header"], document)
+            Response(content=data, media_type="application/xml")
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Document with Id {document_id} not found or is empty",
+            )
     else:
+        print(envelope["Body"])
         raise HTTPException(
             status_code=400, detail=f"Content type {content_type} not supported"
         )
 
+
 from fhirclient.models import bundle
+
 
 @router.post("/iti38")
 async def iti38(request: Request):
