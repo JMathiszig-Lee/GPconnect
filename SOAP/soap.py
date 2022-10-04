@@ -47,14 +47,13 @@ async def iti39(request: Request):
             # return ITI39 response
             message_id = envelope["Header"]["MessageID"]
             data = await iti_39_response(message_id, document_id, document)
-            Response(content=data, media_type="application/xml")
+            return Response(content=data, media_type="application/xml")
         else:
             raise HTTPException(
                 status_code=404,
                 detail=f"Document with Id {document_id} not found or is empty",
             )
     else:
-        print(envelope["Body"])
         raise HTTPException(
             status_code=400, detail=f"Content type {content_type} not supported"
         )

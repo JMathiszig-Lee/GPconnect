@@ -63,4 +63,5 @@ with open("xml/4. Perform XCA ITI-39 document retrieve.xml") as iti38:
     headers = {"Content-Type": "application/xml"}
     url = "http://127.0.0.1:8000/SOAP/iti39"
     r = requests.post(url, data=body, headers=headers)
-    print(r.content)
+    print(r.status_code)
+    # print(r.text)

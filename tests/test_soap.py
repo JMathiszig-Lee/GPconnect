@@ -8,18 +8,18 @@ from main import app
 client = TestClient(app)
 
 
-def test_iti38():
-    with open("xml/2. Perform XCA ITI-38 query.xml") as iti38:
-        dom = ElementTree.parse(iti38)
-        root = dom.getroot()
-        body = ElementTree.tostring(root)
+# def test_iti38():
+#     with open("xml/2. Perform XCA ITI-38 query.xml") as iti38:
+#         dom = ElementTree.parse(iti38)
+#         root = dom.getroot()
+#         body = ElementTree.tostring(root)
 
-        response = client.post(
-            "/SOAP/iti38", headers={"Content-Type": "application/xml"}, data=body
-        )
+#         response = client.post(
+#             "/SOAP/iti38", headers={"Content-Type": "application/xml"}, data=body
+#         )
 
-        assert response.status_code == 200
-        assert response.text == 1
+#         assert response.status_code == 200
+#         assert response.text == 1
 
 
 def test_iti39():
@@ -33,3 +33,4 @@ def test_iti39():
         )
 
         assert response.status_code == 200
+        assert response.content == 1

@@ -1,3 +1,4 @@
+import base64
 import logging
 
 import xmltodict
@@ -9,14 +10,16 @@ from redis_connect import redis_client
 async def iti_39_response(message_id, document_id, document):
     registry_id = redis_client.get("registry")
     soap_response = {}
-    soap_response["Header"] = {
+    soap_response["Envelope"] = {}
+    header = {
         "Action": {
             "@mustUnderstand": 1,
             "#text": "urn:ihe:iti:2007:CrossGatewayRetrieveResponse",
         },
         "RelatesTo": {"#text": message_id},
     }
-    soap_response["Body"] = {
+    base64_bytes = base64.b64encode(document)
+    body = {
         "RetrieveDocumentSetResponse": {
             "@xmlns": "urn:ihe:iti:xds-b:2007",
             "RegistryResponse": {
@@ -27,11 +30,15 @@ async def iti_39_response(message_id, document_id, document):
                     "RepositoryUniqueId": {"#text": registry_id},
                     "DocumentUniqueId": {"#text": document_id},
                     "mimeType": {"#text": "text/xml"},
-                    "Document": document,
+                    "Document": base64_bytes.decode("ascii"),
                 },
             },
         }
     }
+    soap_response["Envelope"]["Header"] = header
+    soap_response["Envelope"]["Body"] = body
+    with open(f"{document_id}.xml", "w") as output:
+        output.write(xmltodict.unparse(soap_response, pretty=True))
 
     return xmltodict.unparse(soap_response, pretty=True)
 
@@ -84,17 +91,17 @@ async def iti_38_response(nhsno: int, queryid: str):
 
         slots.append(create_slot("sourcePatientId", nhsno))
         slots.append(create_slot("languageCode", "en-GB"))
-        slots.append(create_slot("hash", -1))
-        slots.append(create_slot("size", -1))
+        slots.append(create_slot("hash", "-1"))
+        slots.append(create_slot("size", "-1"))
         slots.append(create_slot("repositoryUniqueId", redis_client.get("registry")))
 
-        body["RegistryObjectList"] = {
+        body["AdhocQueryResponse"]["RegistryObjectList"] = {
             "@xmlns": "urn:oasis:names:tc:ebxml-regrep:xsd:rim:3.0",
             "ExtrinsicObject": {
                 "@id": f"urn:uuid:{docid}",
                 "@status": "urn:oasis:names:tc:ebxmlregrep:StatusType:Approved",
                 "@objectType": "urn:uuid:34268e47-fdf5-41a6-ba33-82133c465248",
-                "mimeType": "text/xml",
+                "@mimeType": "text/xml",
                 "Slot": slots,
             },
         }
@@ -105,5 +112,5 @@ async def iti_38_response(nhsno: int, queryid: str):
     soap_response["Envelope"] = {}
     soap_response["Envelope"]["Header"] = header
     soap_response["Envelope"]["Body"] = body
-    print(xmltodict.unparse(soap_response, pretty=True))
+
     return xmltodict.unparse(soap_response, pretty=True)
