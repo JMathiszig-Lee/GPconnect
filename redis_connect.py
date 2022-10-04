@@ -15,3 +15,6 @@ def redis_connect() -> redis.Redis:
     except:
         print("Redis Error")
         sys.exit(1)
+
+
+redis_client = redis_connect()

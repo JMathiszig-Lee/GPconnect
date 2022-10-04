@@ -5,8 +5,9 @@ import xmltodict
 from fastapi import APIRouter, HTTPException, Request, Response
 
 from ccda.helpers import clean_soap
-from .responses import iti_39_response
 from redis_connect import redis_connect
+
+from .responses import iti_38_response, iti_39_response
 
 router = APIRouter(prefix="/SOAP")
 client = redis_connect()
@@ -44,7 +45,8 @@ async def iti39(request: Request):
         document = client.get(document_id)
         if document is not None:
             # return ITI39 response
-            data = await iti_39_response(envelope["Header"], document)
+            message_id = envelope["Header"]["MessageID"]
+            data = await iti_39_response(message_id, document_id, document)
             Response(content=data, media_type="application/xml")
         else:
             raise HTTPException(
@@ -57,19 +59,23 @@ async def iti39(request: Request):
             status_code=400, detail=f"Content type {content_type} not supported"
         )
 
+
 @router.post("/iti38")
 async def iti38(request: Request):
     content_type = request.headers["Content-Type"]
-    # Response(content=data, media_type="application/xml")
     if content_type == "application/xml":
         body = await request.body()
         envelope = clean_soap(body)
         soap_body = envelope["Body"]
-        slots = soap_body["AdhocQueryRequest"]["AdhocQueryRequest"]["Slot"]
-        query_id = soap_body["AdhocQueryRequest"]["AdhocQueryRequest"]["@id"]
-        patient_id = next(x["ValueList"]["Value"] for x in slots if x["@name"] == "XDSDocumentEntryPatientId")
-
-        return envelope
+        slots = soap_body["AdhocQueryRequest"]["AdhocQuery"]["Slot"]
+        query_id = soap_body["AdhocQueryRequest"]["AdhocQuery"]["@id"]
+        patient_id = next(
+            x["ValueList"]["Value"]
+            for x in slots
+            if x["@name"] == "$XDSDocumentEntryPatientId"
+        )
+        data = await iti_38_response(patient_id, query_id)
+        return Response(content=data, media_type="application/xml")
     else:
         raise HTTPException(
             status_code=400, detail=f"Content type {content_type} not supported"

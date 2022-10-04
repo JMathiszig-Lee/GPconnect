@@ -19,6 +19,7 @@ def test_iti38():
         )
 
         assert response.status_code == 200
+        assert response.text == 1
 
 
 def test_iti39():

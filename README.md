@@ -8,3 +8,6 @@ change callback to your url (ngrok is useful)
 create .env file in repo and add nhs developer api keys
 set up environment with pipenv
 run fastapi with uvicorn main:app --reload
+
+
+redis-server /etc/redis/6379.conf
