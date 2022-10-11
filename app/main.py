@@ -14,7 +14,7 @@ from .ccda.fhir2ccda import convert_bundle
 from .ccda.helpers import validateNHSnumber
 from .redis_connect import redis_client
 from .security import create_jwt
-from .SOAP import soap
+from .soap import soap
 
 app = FastAPI()
 app.include_router(soap.router)
