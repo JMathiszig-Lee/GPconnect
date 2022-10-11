@@ -1,27 +1,30 @@
 import json
+import logging
 import os
 from datetime import timedelta
 from uuid import uuid4
 
 import httpx
 import xmltodict
-from fastapi import FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fhirclient.models import bundle
 
-from ccda.convert_mime import convert_mime
-from ccda.fhir2ccda import convert_bundle
-from ccda.helpers import validateNHSnumber
-from redis_connect import redis_connect
-from security import create_jwt
+from .ccda.convert_mime import convert_mime
+from .ccda.fhir2ccda import convert_bundle
+from .ccda.helpers import validateNHSnumber
+from .redis_connect import redis_client
+from .security import create_jwt
+from .soap import soap
 
-client = redis_connect()
 app = FastAPI()
+app.include_router(soap.router)
+
 REGISTRY_ID = os.getenv("REGISTRY_ID", str(uuid4()))
 
 
 @app.on_event("startup")
 async def startup_event():
-    client.set("registry", REGISTRY_ID)
+    redis_client.set("registry", REGISTRY_ID)
 
 
 @app.get("/")
@@ -30,20 +33,14 @@ async def root():
 
 
 @app.get("/gpconnect/{nhsno}")
-async def gpconnect(nhsno: int = 9690937286):
+async def gpconnect(nhsno: int, background_tasks: BackgroundTasks):
     """accesses gp connect endpoint for nhs number"""
-
-    # test cache
-    docid = client.get(nhsno)
-    if docid is not None:
-        print("cached!!!!")
-        print(docid)
 
     # validate nhsnumber
     if validateNHSnumber(nhsno) == False:
+        logging.error(f"{nhsno} is not a valid NHS number")
         raise HTTPException(status_code=400, detail="Invalid NHS number")
 
-    FHir_identifier = f"https://fhir.nhs.uk/Id/nhs-number|{nhsno}"
     token = create_jwt()
     headers = {
         "Ssp-TraceID": "09a01679-2564-0fb4-5129-aecc81ea2706",
@@ -105,16 +102,16 @@ async def gpconnect(nhsno: int = 9690937286):
         except:
             pass
 
-    ##cache this response
     xml_ccda = await convert_bundle(fhir_bundle, bundle_index)
     xop = convert_mime(xml_ccda)
     doc_uuid = str(uuid4())
 
-    client.setex(nhsno, timedelta(minutes=5), doc_uuid)
-    client.setex(doc_uuid, timedelta(minutes=5), xop)
+    # TODO set this as background task
+    redis_client.setex(nhsno, timedelta(minutes=5), doc_uuid)
+    redis_client.setex(doc_uuid, timedelta(minutes=5), xop)
 
     # pprint(xml_ccda)
     with open(f"{nhsno}.xml", "w") as output:
         output.write(xmltodict.unparse(xml_ccda, pretty=True))
 
-    return json.loads(r.text)
+    return {"document_id": doc_uuid}
