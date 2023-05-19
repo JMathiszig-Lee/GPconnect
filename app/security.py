@@ -1,17 +1,15 @@
-from time import time
-import jwt
 import uuid
+from time import time
+
+import jwt
 
 """
 creation of JWT as per https://developer.nhs.uk/apis/gpconnect-1-5-0/integration_cross_organisation_audit_and_provenance.html
 """
 
 
-def pds_jwst(issuer, subject, audience, key_id):
-    headers = {
-        "typ": "JWT",
-        "kid": key_id
-    }
+def pds_jwt(issuer, subject, audience, key_id):
+    headers = {"typ": "JWT", "kid": key_id}
     payload = {
         "sub": subject,
         "iss": issuer,
@@ -19,12 +17,11 @@ def pds_jwst(issuer, subject, audience, key_id):
         "aud": audience,
         "exp": int(time()) + 300,
     }
-    with open("jwt_private.key", "r") as f:
+    with open("keys/test-1.pem", "r") as f:
         private_key = f.read()
-        
-    return jwt.encode(payload, private_key, algorithm="RS512", headers=headers)
+    return jwt.encode(payload, key=private_key, algorithm="RS512", headers=headers)
 
-    
+
 def create_jwt(
     audience: str = "https://orange.testlab.nhs.uk/B82617/STU3/1/gpconnect/documents/fhir",
 ):

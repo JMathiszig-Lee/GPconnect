@@ -22,6 +22,7 @@ def redis_connect() -> redis.Redis:
             return client
     except:
         print("Redis Error")
+        print(client.ping())
         sys.exit(1)
 
 
