@@ -5,6 +5,7 @@ name = "pypi"
 
 [packages]
 fastapi = "*"
+<<<<<<< HEAD
 uvicorn = "*"
 requests-oauthlib = "*"
 beautifulsoup4 = "*"
@@ -12,9 +13,22 @@ pydantic = "*"
 pyjwt = "*"
 httpx = "*"
 fhirclient = "3.0.0"
+=======
+pydantic = "*"
+pyjwt = "*"
+httpx = "*"
+xmltodict = "*"
+uvicorn = {extras = ["standard"], version = "*"}
+fhirclient = "~=3.0.0"
+redis = "*"
+>>>>>>> dev
 
 [dev-packages]
 black = "*"
+websockets = "*"
+pre-commit = "*"
+isort = "*"
+pytest = "*"
 
 [requires]
 python_version = "3.9"

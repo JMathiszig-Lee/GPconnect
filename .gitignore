@@ -130,3 +130,10 @@ dmypy.json
 
 scr.json
 ccda.xml
+
+#XML files
+/xml
+*.xml
+
+#redis
+*.rdb
