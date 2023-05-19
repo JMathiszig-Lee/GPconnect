@@ -34,7 +34,7 @@ def create_jwt(
     - make requesting practioner dynamic
     - make audience dynamic
     """
-    created_time = int(time.time())
+    created_time = int(time())
     payload = {
         "iss": "https://orange.testlab.nhs.uk/",
         "sub": "1",

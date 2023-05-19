@@ -43,7 +43,15 @@ async def gpconnect(nhsno: int, background_tasks: BackgroundTasks):
         logging.error(f"{nhsno} is not a valid NHS number")
         raise HTTPException(status_code=400, detail="Invalid NHS number")
 
+    #TODO pds search
+    pds_search = await pds.lookup_patient(nhsno)
+    print(pds_search)
+
+    #TODO sds search
+    
     token = create_jwt()
+
+
     headers = {
         "Ssp-TraceID": "09a01679-2564-0fb4-5129-aecc81ea2706",
         "Ssp-From": "200000000359",
