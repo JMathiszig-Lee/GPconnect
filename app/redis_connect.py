@@ -17,6 +17,7 @@ def redis_connect() -> redis.Redis:
                 port=6379,
             )
         ping = client.ping()
+        print(ping)
         if ping is True:
             return client
     except:
