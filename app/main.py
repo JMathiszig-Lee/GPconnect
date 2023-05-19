@@ -15,9 +15,11 @@ from .ccda.helpers import validateNHSnumber
 from .redis_connect import redis_client
 from .security import create_jwt
 from .soap import soap
+from .pds import pds
 
 app = FastAPI()
 app.include_router(soap.router)
+app.include_router(pds.router)
 
 REGISTRY_ID = os.getenv("REGISTRY_ID", str(uuid4()))
 
