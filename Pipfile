@@ -12,6 +12,7 @@ xmltodict = "*"
 uvicorn = {extras = ["standard"], version = "*"}
 fhirclient = "~=3.0.0"
 redis = "*"
+cryptography = "*"
 
 [dev-packages]
 black = "*"
@@ -21,4 +22,4 @@ isort = "*"
 pytest = "*"
 
 [requires]
-python_version = "3.10"
+python_version = "3.9"
