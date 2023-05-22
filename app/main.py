@@ -48,6 +48,12 @@ async def root():
     </html
     """
 
+@app.get("/demo/{nhsno}")
+async def demo(nhsno: int):
+    """
+    """
+    bundle_id = await gpconnect(nhsno)
+    return redis_client.get(bundle_id)
 
 @app.get("/gpconnect/{nhsno}")
 async def gpconnect(nhsno: int, background_tasks: BackgroundTasks):
