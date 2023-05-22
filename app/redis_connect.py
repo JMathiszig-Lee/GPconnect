@@ -12,15 +12,13 @@ def redis_connect() -> redis.Redis:
             # for HEROKU DEPLOYS
             client = redis.from_url(os.environ.get("REDIS_URL"))
         else:
-            client = redis.Redis(
-                host=REDIS_HOST,
-                port=6379,
-            )
+            client = redis.Redis(host=REDIS_HOST, port=6379, decode_responses=True)
         ping = client.ping()
         if ping is True:
             return client
     except:
         print("Redis Error")
+        print(client.ping())
         sys.exit(1)
 
 

@@ -137,3 +137,7 @@ ccda.xml
 
 #redis
 *.rdb
+
+#key files
+*.pem
+keys/
