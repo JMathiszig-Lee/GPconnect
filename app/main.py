@@ -7,6 +7,7 @@ from uuid import uuid4
 import httpx
 import xmltodict
 from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
 from fhirclient.models import bundle
 
 from .ccda.convert_mime import convert_mime
@@ -29,9 +30,23 @@ async def startup_event():
     redis_client.set("registry", REGISTRY_ID)
 
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
 async def root():
-    return {"message": "hello world"}
+    return """
+    <html>
+        <head>
+            <title> Welcome </title
+        </head>
+        <body>
+            <h3>Xhuma</h3>
+            <p>This is the internet facing demo for Xhuma</p>
+            <p>Interactive API documentation is available <a href="https://xhuma-demo.herokuapp.com/docs#/">here</a>
+            <h4>endpoints</h4>
+            <p>/pds/lookuppatient/nhsno will perform a pds lookup and return the fhir response</p>
+            <p>/gpconnect/nhsno will perform a gpconnect access record structured query, convert it to a CCDA and return the cached record uuid</p>
+        </body>
+    </html
+    """
 
 
 @app.get("/gpconnect/{nhsno}")
