@@ -78,7 +78,7 @@ docker-compose up
 ---
 ## Branches
 
-Development will take place on `Dev`. Feature development should be checked out onto their own branch from there
+Development will take place on <a href=https://github.com/UCLH-Foundry/Xhuma/tree/dev>Dev</a>, check there for latest progress. Feature development should be checked out onto their own branch.
 `Demo` is the branch for the internet facing demo, currently on heroku.
 `Integration` will be for final intergration testing and `Main` will host final production builds
 
@@ -88,6 +88,6 @@ Feature --> Dev --> Feature
 Dev --PR --> Integration
 Integration --PR-->Main
 Dev -.-> Demo
-
+click Dev href "https://github.com/UCLH-Foundry/Xhuma/tree/dev"
 ```
 
