@@ -11,7 +11,7 @@ from fhirclient.models import patient as p
 from app.redis_connect import redis_client
 from app.security import pds_jwt
 
-BASE_PATH = "https://sandbox.api.service.nhs.uk/personal-demographics/FHIR/R4/"
+BASE_PATH = "https://sandbox.api.service.nhs.uk/"
 DEV_BASE_PATH = "https://dev.api.service.nhs.uk/"
 INT_BASE_PATH = "https://int.api.service.nhs.uk/"
 API_KEY = os.getenv("API_KEY")
@@ -37,6 +37,7 @@ async def lookup_patient(nhsno: int):
         r = httpx.post(full_path, data=oauth_params)
 
         response_dict = json.loads(r.text)
+        print(response_dict)
         nhs_token = response_dict["access_token"]
 
         redis_client.setex("access_token", response_dict["expires_in"], nhs_token)
