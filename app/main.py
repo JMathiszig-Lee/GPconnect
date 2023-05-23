@@ -40,10 +40,11 @@ async def root():
         <body>
             <h3>Xhuma</h3>
             <p>This is the internet facing demo for Xhuma</p>
-            <p>Interactive API documentation is available <a href="https://xhuma-demo.herokuapp.com/docs#/">here</a>
+            <p>Interactive API documentation is available <a href="/docs#/">here</a>
             <h4>endpoints</h4>
-            <p>/pds/lookuppatient/nhsno will perform a pds lookup and return the fhir response</p>
-            <p>/gpconnect/nhsno will perform a gpconnect access record structured query, convert it to a CCDA and return the cached record uuid</p>
+            <p>/pds/lookuppatient/nhsno will perform a pds lookup and return the fhir response. <a href="pds/lookup_patient/9449306680">Example</a></p>
+            <p>/gpconnect/nhsno will perform a gpconnect access record structured query, convert it to a CCDA and return the cached record uuid. <a href="gpconnect/9690937278">Example</a></p>
+            <p>for the purposes of the internet facing demo /demo/nhsno will return the mime encoded ccda. <a href="/demo/9690937278">Example</a></p>
         </body>
     </html
     """
@@ -53,10 +54,11 @@ async def demo(nhsno: int):
     """
     """
     bundle_id = await gpconnect(nhsno)
-    return redis_client.get(bundle_id)
+
+    return redis_client.get(bundle_id["document_id"])
 
 @app.get("/gpconnect/{nhsno}")
-async def gpconnect(nhsno: int, background_tasks: BackgroundTasks):
+async def gpconnect(nhsno: int):
     """accesses gp connect endpoint for nhs number"""
 
     # validate nhsnumber
