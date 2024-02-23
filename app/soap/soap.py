@@ -22,8 +22,8 @@ NAMESPACES = (
 )
 
 
-@router.post("/iti41")
-async def iti41(equest: Request):
+@router.post("/iti47")
+async def iti47(equest: Request):
     # Response(content=data, media_type="application/xml")
     pass
 
@@ -31,7 +31,7 @@ async def iti41(equest: Request):
 @router.post("/iti39")
 async def iti39(request: Request):
     content_type = request.headers["Content-Type"]
-    if content_type == "application/xml":
+    if content_type == "application/soap+xml":
         body = await request.body()
         envelope = clean_soap(body)
         try:
@@ -61,7 +61,7 @@ async def iti39(request: Request):
 @router.post("/iti38")
 async def iti38(request: Request):
     content_type = request.headers["Content-Type"]
-    if content_type == "application/xml":
+    if content_type == "application/soap+xml":
         body = await request.body()
         envelope = clean_soap(body)
         soap_body = envelope["Body"]
