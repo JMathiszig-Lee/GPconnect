@@ -58,9 +58,34 @@ NAMESPACES = (
 
 
 @router.post("/iti47")
-async def iti47(equest: Request):
-    # Response(content=data, media_type="application/xml")
-    pass
+async def iti47(request: Request):
+    content_type = request.headers["Content-Type"]
+    if content_type == "application/soap+xml":
+        body = await request.body()
+        envelope = clean_soap(body)
+        soap_body = envelope["Body"]
+        slots = soap_body["AdhocQueryRequest"]["AdhocQuery"]["Slot"]
+        query_id = soap_body["AdhocQueryRequest"]["AdhocQuery"]["@id"]
+        patient_id = next(
+            x["ValueList"]["Value"]
+            for x in slots
+            if x["@name"] == "$XDSDocumentEntryPatientId"
+        )
+        data = """"<?xml version="1.0"?>
+            <Header>
+                ping
+            </Header>
+            <Body>
+            Pong
+            </Body>
+            """
+        return Response(content=data, media_type="application/xml")
+    else:
+        raise HTTPException(
+            status_code=400, detail=f"Content type {content_type} not supported"
+        )
+
+    
 
 
 @router.post("/iti39")
