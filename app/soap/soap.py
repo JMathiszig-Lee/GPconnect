@@ -2,7 +2,8 @@ import json
 from urllib.request import Request
 
 import xmltodict
-from fastapi import APIRouter, HTTPException, Request, Response, APIRoute
+from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi.routing import APIRoute
 from typing import Callable, Dict, Any
 from starlette.background import BackgroundTask
 
@@ -42,7 +43,7 @@ class LoggingRoute(APIRoute):
 
 
 router = APIRouter(prefix="/SOAP", route_class=LoggingRoute)
-logging.basicConfig(filename='info.log', level=logging.DEBUG)
+logging.basicConfig(filename='info.log', level=logging.INFO)
 client = redis_connect()
 
 NAMESPACES = (
@@ -60,9 +61,10 @@ NAMESPACES = (
 @router.post("/iti47")
 async def iti47(request: Request):
     content_type = request.headers["Content-Type"]
-    if content_type == "application/soap+xml":
+    if "application/soap+xml" in content_type:
         body = await request.body()
         envelope = clean_soap(body)
+        return envelope["Body"]
         soap_body = envelope["Body"]
         slots = soap_body["AdhocQueryRequest"]["AdhocQuery"]["Slot"]
         query_id = soap_body["AdhocQueryRequest"]["AdhocQuery"]["@id"]

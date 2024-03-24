@@ -6,6 +6,10 @@ from httpx import AsyncClient
 
 from ..redis_connect import redis_client
 
+async def iti_47_response(parameters:dict):
+    soap_response = {}
+
+    pass
 
 async def iti_39_response(message_id, document_id, document):
     registry_id = redis_client.get("registry")
