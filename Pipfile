@@ -13,6 +13,7 @@ uvicorn = {extras = ["standard"], version = "*"}
 fhirclient = "~=3.0.0"
 redis = "*"
 cryptography = "*"
+jwcrypto = "*"
 
 [dev-packages]
 black = "*"
