@@ -6,6 +6,7 @@ RUN pip install pipenv
 
 COPY Pipfile /code/Pipfile
 COPY Pipfile.lock /code/Pipfile.lock
+COPY keys/test-1.pem /code/keys/test-1.pem
 
 RUN pipenv install --system --deploy
 
