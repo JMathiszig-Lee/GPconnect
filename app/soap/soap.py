@@ -4,7 +4,8 @@ from typing import Any, Callable, Dict
 from urllib.request import Request
 
 import xmltodict
-from fastapi import APIRoute, APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi.routing import APIRoute
 from starlette.background import BackgroundTask
 
 from ..ccda.helpers import clean_soap
