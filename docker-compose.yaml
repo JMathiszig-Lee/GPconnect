@@ -12,3 +12,5 @@ services:
       - "80:80"
     depends_on:
       - redis
+    environment:
+      API_KEY: ${API_KEY}
