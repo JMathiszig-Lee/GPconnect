@@ -6,6 +6,16 @@ from app.main import app
 
 client = TestClient(app)
 
+def test_iti47():
+    with open("xml/pdqRequest.xml") as iti47:
+        dom = ElementTree.parse(iti47)
+        root = dom.getroot()
+        body = ElementTree.tostring(root)
+        response = client.post(
+            "/SOAP/iti47", headers={"Content-Type": "application/xml"}, data=body
+        )
+        assert response.status_code == 200
+
 
 def test_iti47():
     headers = {
