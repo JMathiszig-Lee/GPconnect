@@ -1,5 +1,4 @@
 # GPConnect to CCDA service
-![codiga](https://api.codiga.io/project/34799/status/svg)
 ![Python versio](https://img.shields.io/github/pipenv/locked/python-version/JMathiszig-Lee/GPconnect)
 
 ---
@@ -21,6 +20,10 @@ Current the service is designed to interact with a requesting EHR via ITI reques
   Service->>NHS API's: FHIR PDS lookup
   NHS API's->> Service: PDS response
   Service->>EHR: ITI 47 Response
+  Service ->> Redis Cache: Check for cached SDS lookup
+  Service -->> NHS API's: SDS lookup
+  NHS API's -->> Service: SDS Response
+  Redis Cache ->> Service: Return ADIS and Fhir root
   EHR->>Service: ITI 38 Request
   Service->>Redis Cache: Check for cached response
   Service-->>NHS API's:GPconnnect Structured SCR request
@@ -33,9 +36,9 @@ Current the service is designed to interact with a requesting EHR via ITI reques
 ```
 ---
 ## Tasks
-Currently on open test environments only:
+Currently on open test environment or int as able:
 - [ ] ITI 47
-- [ ] Fhir PDS lookup
+- [x] Fhir PDS lookup
 - [x] ITI 38 call and response
 - [x] GP Connect call
 - [x] Fhir Bundle -> CCDA conversion
@@ -44,7 +47,7 @@ Currently on open test environments only:
 ## Todo
 - [ ] Flesh out html section of CCDA
 - [ ] Progress to NHS test environment
-- [ ] Sign up to PDS lookup
+- [x] Sign up to PDS lookup
 
 ---
 ## Running
@@ -72,3 +75,19 @@ The project can also be run using docker. Ensure you have a valid installation a
 ```
 docker-compose up
 ```
+---
+## Branches
+
+Development will take place on <a href=https://github.com/UCLH-Foundry/Xhuma/tree/dev>Dev</a>, check there for latest progress. Feature development should be checked out onto their own branch.
+`Demo` is the branch for the internet facing demo, currently on heroku.
+`Integration` will be for final intergration testing and `Main` will host final production builds
+
+```mermaid
+flowchart TD
+Feature --> Dev --> Feature
+Dev --PR --> Integration
+Integration --PR-->Main
+Dev -.-> Demo
+click Dev href "https://github.com/UCLH-Foundry/Xhuma/tree/dev"
+```
+
