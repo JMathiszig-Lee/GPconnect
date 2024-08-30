@@ -9,6 +9,8 @@ import xmltodict
 from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from fhirclient.models import bundle
+from jwcrypto import jwk, jws
+from jwcrypto.common import json_encode
 
 from .ccda.convert_mime import convert_mime
 from .ccda.fhir2ccda import convert_bundle
@@ -28,6 +30,21 @@ REGISTRY_ID = os.getenv("REGISTRY_ID", str(uuid4()))
 @app.on_event("startup")
 async def startup_event():
     redis_client.set("registry", REGISTRY_ID)
+    # check if there is a jwk and if not generate
+    if os.path.isfile('keys/jwk.json'):
+        pass
+    else:
+        # generate one with with private key
+        with open ("keys/test-1.pem", "rb") as pemfile:
+            private_pem = pemfile.read()
+            public_jwk = jwk.JWK.from_pem(data=private_pem)
+            jwk_json = public_jwk.export_public(as_dict=True)
+            with open("keys/jwk.json", 'w') as f:
+                json.dump(jwk_json, f)
+                
+
+
+
 
 
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
@@ -56,6 +73,15 @@ async def demo(nhsno: int):
     bundle_id = await gpconnect(nhsno)
 
     return redis_client.get(bundle_id["document_id"])
+
+@app.get("/jwk")
+async def get_jwk():
+    """public endpoint for jwk key"""
+    with open("keys/jwk.json", "r") as jwk_file:
+        key = json.load(jwk_file)
+    return key
+
+
 
 @app.get("/gpconnect/{nhsno}")
 async def gpconnect(nhsno: int):

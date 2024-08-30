@@ -21,5 +21,5 @@ def redis_connect() -> redis.Redis:
         print(client.ping())
         sys.exit(1)
 
-
+    
 redis_client = redis_connect()
