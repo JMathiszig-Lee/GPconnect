@@ -10,7 +10,7 @@ def redis_connect() -> redis.Redis:
     try:
         if os.environ.get("REDIS_URL") is not None:
             # for HEROKU DEPLOYS
-            client = redis.from_url(os.environ.get("REDIS_URL"))
+            client = redis.from_url(os.environ.get("REDIS_URL"), decode_responses=True)
         else:
             client = redis.Redis(host=REDIS_HOST, port=6379, decode_responses=True)
         ping = client.ping()

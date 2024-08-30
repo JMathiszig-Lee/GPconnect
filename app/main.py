@@ -7,6 +7,7 @@ from uuid import uuid4
 import httpx
 import xmltodict
 from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
 from fhirclient.models import bundle
 from jwcrypto import jwk, jws
 from jwcrypto.common import json_encode
@@ -46,9 +47,32 @@ async def startup_event():
 
 
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
 async def root():
-    return {"message": "hello world"}
+    return """
+    <html>
+        <head>
+            <title> Welcome </title
+        </head>
+        <body>
+            <h3>Xhuma</h3>
+            <p>This is the internet facing demo for Xhuma</p>
+            <p>Interactive API documentation is available <a href="/docs#/">here</a>
+            <h4>endpoints</h4>
+            <p>/pds/lookuppatient/nhsno will perform a pds lookup and return the fhir response. <a href="pds/lookup_patient/9449306680">Example</a></p>
+            <p>/gpconnect/nhsno will perform a gpconnect access record structured query, convert it to a CCDA and return the cached record uuid. <a href="gpconnect/9690937278">Example</a></p>
+            <p>for the purposes of the internet facing demo /demo/nhsno will return the mime encoded ccda. <a href="/demo/9690937278">Example</a></p>
+        </body>
+    </html
+    """
+
+@app.get("/demo/{nhsno}")
+async def demo(nhsno: int):
+    """
+    """
+    bundle_id = await gpconnect(nhsno)
+
+    return redis_client.get(bundle_id["document_id"])
 
 @app.get("/jwk")
 async def get_jwk():
@@ -58,8 +82,9 @@ async def get_jwk():
     return key
 
 
+
 @app.get("/gpconnect/{nhsno}")
-async def gpconnect(nhsno: int, background_tasks: BackgroundTasks):
+async def gpconnect(nhsno: int):
     """accesses gp connect endpoint for nhs number"""
 
     # validate nhsnumber

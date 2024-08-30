@@ -1,4 +1,5 @@
 import uuid
+import os
 from time import time
 
 import jwt
@@ -7,6 +8,7 @@ import jwt
 creation of JWT as per https://developer.nhs.uk/apis/gpconnect-1-5-0/integration_cross_organisation_audit_and_provenance.html
 """
 
+JWTKEY = os.getenv("JWTKEY")
 
 def pds_jwt(issuer, subject, audience, key_id):
     headers = {"typ": "JWT", "kid": key_id}
@@ -17,8 +19,11 @@ def pds_jwt(issuer, subject, audience, key_id):
         "aud": audience,
         "exp": int(time()) + 300,
     }
-    with open("keys/test-1.pem", "r") as f:
-        private_key = f.read()
+    if JWTKEY is not None:
+        private_key = JWTKEY
+    else:
+        with open("keys/test-1.pem", "r") as f:
+            private_key = f.read()
     return jwt.encode(payload, key=private_key, algorithm="RS512", headers=headers)
 
 
