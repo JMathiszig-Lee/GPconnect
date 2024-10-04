@@ -72,7 +72,7 @@ def clean_soap(
         "urn:oasis:names:tc:ebxml-regrep:xsd:rim:3.0": None,
         "urn:ihe:iti:xds-b:2007": None,
         "urn:hl7-org:v3": None,
-        "soapenv": None
+        "soap": None,
     },
 ) -> dict:
 
@@ -94,5 +94,4 @@ def clean_soap(
         process_namespaces=True,
         namespaces=namespaces,
     )
-
     return xmldict["Envelope"]

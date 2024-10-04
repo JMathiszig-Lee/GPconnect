@@ -6,13 +6,12 @@ from urllib.request import Request
 import xmltodict
 from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.routing import APIRoute
-
 from starlette.background import BackgroundTask
 
 from ..ccda.helpers import clean_soap
+from ..pds.pds import lookup_patient
 from ..redis_connect import redis_connect
 from .responses import iti_38_response, iti_39_response, iti_47_response
-from ..pds.pds import lookup_patient
 
 
 def log_info(req_body, res_body):
@@ -56,6 +55,7 @@ NAMESPACES = (
         "urn:oasis:names:tc:ebxml-regrep:xsd:query:3.0": None,
         "urn:oasis:names:tc:ebxml-regrep:xsd:rim:3.0": None,
         "urn:ihe:iti:xds-b:2007": None,
+        "soap": None,
     },
 )
 
@@ -66,25 +66,34 @@ async def iti47(request: Request):
     if "application/soap+xml" in content_type:
         body = await request.body()
         envelope = clean_soap(body)
-        query_params = envelope["Body"]["PRPA_IN201305UV02"]["controlActProcess"]["queryByParameter"]["parameterList"]
-        #for each query parameter fir the patient id with the root for nhsno
+        query_params = envelope["Body"]["PRPA_IN201305UV02"]["controlActProcess"][
+            "queryByParameter"
+        ]["parameterList"]
+        # for each query parameter fir the patient id with the root for nhsno
         for param in query_params["livingSubjectId"]:
             print(param)
             if param["value"]["@root"] == "2.16.840.1.113883.2.1.4.1":
                 nhsno = param["value"]["@extension"]
-        #if theres no nhsno then raise an error
+        # if theres no nhsno then raise an error
         if not nhsno:
-            raise HTTPException(status_code=400, detail=f"Invalid request, no nhs number found")
+            raise HTTPException(
+                status_code=400, detail=f"Invalid request, no nhs number found"
+            )
 
         patient = await lookup_patient(nhsno)
-        #if the patient is not found then raise an error
+        # if the patient is not found then raise an error
         if not patient:
             print("Patient not found")
         else:
             print(patient)
-            
 
-        data = await iti_47_response(envelope["Header"]["MessageID"], patient, envelope["Body"]["PRPA_IN201305UV02"]["controlActProcess"]["queryByParameter"])
+        data = await iti_47_response(
+            envelope["Header"]["MessageID"],
+            patient,
+            envelope["Body"]["PRPA_IN201305UV02"]["controlActProcess"][
+                "queryByParameter"
+            ],
+        )
         return Response(content=data, media_type="application/soap+xml")
     else:
         raise HTTPException(

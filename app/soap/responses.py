@@ -1,15 +1,17 @@
 import base64
 import logging
 import uuid
+from datetime import datetime
 
 import xmltodict
 from httpx import AsyncClient
 
 from ..redis_connect import redis_client
 
+
 async def iti_47_response(message_id, patient, query):
     soap_response = {}
-    soap_response["Envelope"] = {}
+    # soap_response["Envelope"] = {}
     header = {
         "Action": {
             "@mustUnderstand": 1,
@@ -18,31 +20,57 @@ async def iti_47_response(message_id, patient, query):
         "RelatesTo": {"#text": message_id},
     }
     body = {}
-    body["PRPA_IN201306UV02"] = {
+    soap_response["PRPA_IN201306UV02"] = {
         "id": {"@root": str(uuid.uuid4())},
-        "creationTime": {"@value": "20210802120000"},
-        "interactionId": {"@root": "2.16.840.1.113883.1.6", "@extension": "PRPA_IN201306UV02"},
+        # TODO make time dynamic
+        "creationTime": {"@value": int(datetime.now().timestamp())},
+        "interactionId": {
+            "@root": "2.16.840.1.113883.1.18",
+            "@extension": "PRPA_IN201306UV02",
+        },
         "processingCode": {"@code": "T"},
         "processingModeCode": {"@code": "T"},
         "acceptAckCode": {"@code": "NE"},
-        "receiver": {"@typeCode": "RCV", "device": {"@classCode": "DEV", "determinerCode": "INSTANCE"}},
-        "sender": {"@typeCode": "SND", "device": {"@classCode": "DEV", "determinerCode": "INSTANCE"}},
-        "acknowledgement": {"typeCode": {"@typecode":"AA"}},
+        "receiver": {
+            "@typeCode": "RCV",
+            "device": {"@classCode": "DEV", "@determinerCode": "INSTANCE"},
+        },
+        "sender": {
+            "@typeCode": "SND",
+            "device": {"@classCode": "DEV", "@determinerCode": "INSTANCE"},
+        },
+        "acknowledgement": {
+            "typeCode": {"@typecode": "AA"},
+            "targetMessage": {"id": {"@root": message_id}},
+        },
         "controlActProcess": {
-            "@classCode": "CACT", 
+            "@classCode": "CACT",
             "@moodCode": "EVN",
-            "code": {"@code": "PRPA_TE201306UV02", "@codeSystem": "2.16.840.1.113883.1.6"},
-            "authorOrPerformer": {"@typeCode": "AUT", "assignedDevice": {"@classCode": "ASSIGNED", "id": {"@root": "1.2.840.114350.1.13.1610.1.7.3.688884.100"}}},
+            "code": {
+                "@code": "PRPA_TE201306UV02",
+                "@codeSystem": "2.16.840.1.113883.1.18",
+            },
+            "authorOrPerformer": {
+                "@typeCode": "AUT",
+                "assignedDevice": {
+                    "@classCode": "ASSIGNED",
+                    "id": {"@root": "1.2.840.114350.1.13.1610.1.7.3.688884.100"},
+                },
+            },
             "subject": {
-                "@typeCode": "SUBJ", 
+                "@typeCode": "SUBJ",
                 "registrationEvent": {
-                    "@classCode": "REG", 
-                    "moodCode": "EVN", 
-                    "statusCode": {"@code": "active"}, 
-                    "subject1": {"@typeCode": "SBJ", 
+                    "@classCode": "REG",
+                    "moodCode": "EVN",
+                    "statusCode": {"@code": "active"},
+                    "subject1": {
+                        "@typeCode": "SBJ",
                         "patient": {
-                            "@classCode": "PAT", 
-                            "id": {"@root": "2.16.840.1.113883.2.1.4.1", "@extension": patient["id"]},
+                            "@classCode": "PAT",
+                            "id": {
+                                "@root": "2.16.840.1.113883.2.1.4.1",
+                                "@extension": patient["id"],
+                            },
                             "statusCode": {"@code": "active"},
                             "patientPerson": {
                                 "@classCode": "PSN",
@@ -50,22 +78,27 @@ async def iti_47_response(message_id, patient, query):
                                     "given": {"#text": patient["name"][0]["given"][0]},
                                     "family": {"#text": patient["name"][0]["family"]},
                                 },
-                                "administrativeGenderCode": {"@code": patient["gender"]},
+                                "administrativeGenderCode": {
+                                    "@code": patient["gender"]
+                                },
                                 "birthTime": {"@value": patient["birthDate"]},
                             },
                         },
                     },
                 },
             },
-                                                                                         
+            "queryAck": {
+                "queryResponseCode": {"@code": "OK"},
+            },
+            "queryByParameter": query,
         },
     }
 
-
-    soap_response["Envelope"]["Header"] = header
-    soap_response["Envelope"]["Body"] = body
+    # soap_response["Envelope"]["Header"] = header
+    # soap_response["Envelope"]["Body"] = body
     print(soap_response)
     return xmltodict.unparse(soap_response, pretty=True)
+
 
 async def iti_39_response(message_id, document_id, document):
     registry_id = redis_client.get("registry")
@@ -149,6 +182,7 @@ async def iti_38_response(nhsno: int, queryid: str):
             slot_dict = {"@name": name, "ValueList": {"Value": {"#text": value}}}
             return slot_dict
 
+        slots.append(create_slot("creationTime", str(int(datetime.now().timestamp()))))
         slots.append(create_slot("sourcePatientId", nhsno))
         slots.append(create_slot("languageCode", "en-GB"))
         slots.append(create_slot("hash", "-1"))
