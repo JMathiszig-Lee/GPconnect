@@ -113,7 +113,7 @@ async def iti_47_response(message_id, patient, query):
     # soap_response["Envelope"]["Header"] = header
     # soap_response["Envelope"]["Body"] = bo
     # dy
-    pprint.pprint(patient)
+    # pprint.pprint(patient)
     return xmltodict.unparse(soap_response, pretty=True)
 
 
@@ -163,7 +163,10 @@ async def iti_38_response(nhsno: int, queryid: str):
         "RelatesTo": {"#text": queryid},
     }
     body = {}
-    body["AdhocQueryResponse"] = {"@status": "ResponseStatusType:Success"}
+    body["AdhocQueryResponse"] = {
+        "@status": "urn:oasis:names:tc:ebxml-regrep:ResponseStatusType:Success",
+        "@xmlns": "urn:oasis:names:tc:ebxml-regrep:xsd:query:3.0",
+    }
 
     # check the redis cash if there's an existing ccda
     docid = redis_client.get(nhsno)
@@ -177,7 +180,9 @@ async def iti_38_response(nhsno: int, queryid: str):
                 docid = r.json()
                 docid = docid["document_id"]
             else:
-                body["AdhocQueryResponse"]["@status"] = "ResponseStatusType:Failure"
+                body["AdhocQueryResponse"][
+                    "@status"
+                ] = "urn:oasis:names:tc:ebxml-regrep:ResponseStatusType:Failure"
                 body["AdhocQueryResponse"]["RegistryErrorList"] = {
                     "@highestSeverity": "urn:oasis:names:tc:ebxml-regrep:ErrorSeverityType:Error",
                     "RegistryError": {
@@ -199,19 +204,27 @@ async def iti_38_response(nhsno: int, queryid: str):
             slot_dict = {"@name": name, "ValueList": {"Value": {"#text": value}}}
             return slot_dict
 
-        slots.append(create_slot("creationTime", str(int(datetime.now().timestamp()))))
-        slots.append(create_slot("sourcePatientId", nhsno))
+        # slots.append(create_slot("creationTime", str(int(datetime.now().timestamp()))))
+        # slots.append(create_slot("sourcePatientId", nhsno))
+        slots.append(
+            create_slot("sourcePatientId", f"{nhsno}^^^&2.16.840.1.113883.2.1.4.1&ISO")
+        )
         slots.append(create_slot("languageCode", "en-GB"))
-        slots.append(create_slot("hash", "-1"))
-        slots.append(create_slot("size", "-1"))
+        # slots.append("entryUUID", f"urn:uuid:{uuid.uuid4()}")
+
+        # No hash for on demand document
+        # slots.append(create_slot("hash", "4cf4f82d78b5e2aac35c31bca8cb79fe6bd6a41e"))
+        slots.append(create_slot("size", "1"))
+        slots.append(create_slot("uniqueId", f"urn:uuid:{docid}"))
         slots.append(create_slot("repositoryUniqueId", redis_client.get("registry")))
 
         body["AdhocQueryResponse"]["RegistryObjectList"] = {
             "@xmlns": "urn:oasis:names:tc:ebxml-regrep:xsd:rim:3.0",
             "ExtrinsicObject": {
-                "@id": f"urn:uuid:{docid}",
-                "@status": "urn:oasis:names:tc:ebxmlregrep:StatusType:Approved",
-                "@objectType": "urn:uuid:34268e47-fdf5-41a6-ba33-82133c465248",
+                "@id": f"urn:uuid:{uuid.uuid4()}",
+                # "uniqueId": f"urn:uuid:{docid}",
+                "@status": "urn:oasis:names:tc:ebxml-regrep:StatusType:Approved",
+                "@objectType": "urn:uuid:34268e47-fdf5-41a6-ba33-82133c465248",  # On Demand
                 "@mimeType": "text/xml",
                 "Slot": slots,
             },
@@ -223,5 +236,5 @@ async def iti_38_response(nhsno: int, queryid: str):
     soap_response["Envelope"] = {}
     soap_response["Envelope"]["Header"] = header
     soap_response["Envelope"]["Body"] = body
-
+    soap_response = soap_response["Envelope"]["Body"]
     return xmltodict.unparse(soap_response, pretty=True)
