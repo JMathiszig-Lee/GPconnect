@@ -215,18 +215,27 @@ async def iti_38_response(nhsno: int, queryid: str):
         # No hash for on demand document
         # slots.append(create_slot("hash", "4cf4f82d78b5e2aac35c31bca8cb79fe6bd6a41e"))
         slots.append(create_slot("size", "1"))
-        slots.append(create_slot("uniqueId", f"urn:uuid:{docid}"))
         slots.append(create_slot("repositoryUniqueId", redis_client.get("registry")))
-
+        object_id = "CCDA_01"
         body["AdhocQueryResponse"]["RegistryObjectList"] = {
             "@xmlns": "urn:oasis:names:tc:ebxml-regrep:xsd:rim:3.0",
             "ExtrinsicObject": {
-                "@id": f"urn:uuid:{uuid.uuid4()}",
-                # "uniqueId": f"urn:uuid:{docid}",
+                "@id": object_id,
                 "@status": "urn:oasis:names:tc:ebxml-regrep:StatusType:Approved",
                 "@objectType": "urn:uuid:34268e47-fdf5-41a6-ba33-82133c465248",  # On Demand
                 "@mimeType": "text/xml",
                 "Slot": slots,
+                # UNIQUE ID SECTION
+                "ExternalIdentifier": {
+                    "@identificationScheme": "urn:uuid:2e82c1f6-a085-4c72-9da3-8640a32e42ab",
+                    "@value": docid,
+                    "@id": f"CCDA-{docid}",
+                    "@registryObject": object_id,
+                    "@objectType": "urn:oasis:names:tc:ebxml-regrep:ObjectType:RegistryObject:ExternalIdentifier",
+                    "Name": {
+                        "LocalizedString": {"@value": "XDSDocumentEntry.uniqueId"}
+                    },
+                },
             },
         }
 

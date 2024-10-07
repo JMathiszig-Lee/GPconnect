@@ -8,7 +8,7 @@ from xmlschema import XMLSchema
 
 from app.ccda.helpers import clean_soap
 
-with open("xml/pdq7may.xml") as iti47:
+with open("xml/pdq10oct.xml") as iti47:
     response_schema = XMLSchema("xml/multicacheschemas/PRPA_IN201306UV02.xsd")
 
     print("ITI47 query")
