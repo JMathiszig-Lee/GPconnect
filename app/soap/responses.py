@@ -1,5 +1,6 @@
 import base64
 import logging
+import pprint
 import uuid
 from datetime import datetime
 
@@ -10,6 +11,8 @@ from ..redis_connect import redis_client
 
 
 async def iti_47_response(message_id, patient, query):
+    gp = patient["generalPractitioner"][0]
+    print(query)
     soap_response = {}
     # soap_response["Envelope"] = {}
     header = {
@@ -21,8 +24,9 @@ async def iti_47_response(message_id, patient, query):
     }
     body = {}
     soap_response["PRPA_IN201306UV02"] = {
+        "@xmlns": "urn:hl7-org:v3",
+        "@ITSVersion": "XML_1.0",
         "id": {"@root": str(uuid.uuid4())},
-        # TODO make time dynamic
         "creationTime": {"@value": int(datetime.now().timestamp())},
         "interactionId": {
             "@root": "2.16.840.1.113883.1.18",
@@ -40,7 +44,7 @@ async def iti_47_response(message_id, patient, query):
             "device": {"@classCode": "DEV", "@determinerCode": "INSTANCE"},
         },
         "acknowledgement": {
-            "typeCode": {"@typecode": "AA"},
+            "typeCode": {"@code": "AA"},
             "targetMessage": {"id": {"@root": message_id}},
         },
         "controlActProcess": {
@@ -59,6 +63,7 @@ async def iti_47_response(message_id, patient, query):
             },
             "subject": {
                 "@typeCode": "SUBJ",
+                "@contextConductionInd": "false",
                 "registrationEvent": {
                     "@classCode": "REG",
                     "moodCode": "EVN",
@@ -74,6 +79,7 @@ async def iti_47_response(message_id, patient, query):
                             "statusCode": {"@code": "active"},
                             "patientPerson": {
                                 "@classCode": "PSN",
+                                "@determinerCode": "INSTANCE",
                                 "name": {
                                     "given": {"#text": patient["name"][0]["given"][0]},
                                     "family": {"#text": patient["name"][0]["family"]},
@@ -83,20 +89,31 @@ async def iti_47_response(message_id, patient, query):
                                 },
                                 "birthTime": {"@value": patient["birthDate"]},
                             },
+                            "providerOrganization": {
+                                "@classCode": "ORG",
+                                "@determinerCode": "INSTANCE",
+                                "id": {
+                                    "@root": "2.16.840.1.113883.2.1.4.3",
+                                    "id": gp["identifier"]["value"],
+                                },
+                            },
                         },
                     },
                 },
             },
             "queryAck": {
+                "queryId": query["queryId"],
                 "queryResponseCode": {"@code": "OK"},
+                "statusCode": {"@code": "deliveredResponse"},
             },
             "queryByParameter": query,
         },
     }
 
     # soap_response["Envelope"]["Header"] = header
-    # soap_response["Envelope"]["Body"] = body
-    print(soap_response)
+    # soap_response["Envelope"]["Body"] = bo
+    # dy
+    pprint.pprint(patient)
     return xmltodict.unparse(soap_response, pretty=True)
 
 
