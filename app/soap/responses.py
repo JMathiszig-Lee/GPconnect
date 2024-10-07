@@ -12,7 +12,7 @@ from ..redis_connect import redis_client
 
 async def iti_47_response(message_id, patient, query):
     gp = patient["generalPractitioner"][0]
-    print(query)
+    # print(query)
     soap_response = {}
     # soap_response["Envelope"] = {}
     header = {
@@ -23,7 +23,7 @@ async def iti_47_response(message_id, patient, query):
         "RelatesTo": {"#text": message_id},
     }
     body = {}
-    soap_response["PRPA_IN201306UV02"] = {
+    body["PRPA_IN201306UV02"] = {
         "@xmlns": "urn:hl7-org:v3",
         "@ITSVersion": "XML_1.0",
         "id": {"@root": str(uuid.uuid4())},
@@ -110,9 +110,9 @@ async def iti_47_response(message_id, patient, query):
         },
     }
 
-    # soap_response["Envelope"]["Header"] = header
-    # soap_response["Envelope"]["Body"] = bo
-    # dy
+    soap_response["Envelope"]["Header"] = header
+    soap_response["Envelope"]["Body"] = body
+
     # pprint.pprint(patient)
     return xmltodict.unparse(soap_response, pretty=True)
 
@@ -245,5 +245,5 @@ async def iti_38_response(nhsno: int, queryid: str):
     soap_response["Envelope"] = {}
     soap_response["Envelope"]["Header"] = header
     soap_response["Envelope"]["Body"] = body
-    soap_response = soap_response["Envelope"]["Body"]
+    # soap_response = soap_response["Envelope"]["Body"]
     return xmltodict.unparse(soap_response, pretty=True)
